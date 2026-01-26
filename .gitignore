@@ -1,0 +1,8 @@
+
+
+/app/node_modules
+/app/.next
+/app/.env
+
+/server/node_modules
+/server/.env
