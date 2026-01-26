@@ -1,6 +1,4 @@
-import { Controller } from '@nestjs/common';
-import { Get } from '@nestjs/common';
-import { Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { QuranService } from './quran.service';
 
 @Controller('quran')
@@ -11,5 +9,15 @@ export class QuranController {
   async getQuran(@Param('id') id: string) {
     const page = parseInt(id);
     return this.quranService.getQuranPage(page);
+  }
+
+  @Post('session')
+  async createSession(@Body() body: { userId: string; page: number }) {
+    return this.quranService.createSession(body.userId, body.page);
+  }
+
+  @Get('streak-history/:userId')
+  async getStreakHistory(@Param('userId') userId: string) {
+    return this.quranService.getStreakHistory(userId);
   }
 }

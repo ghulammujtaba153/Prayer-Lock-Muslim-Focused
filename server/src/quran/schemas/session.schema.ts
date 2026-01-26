@@ -1,22 +1,19 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
-@Schema()
+@Schema({ timestamps: true })
 export class QuranSession extends Document {
-  @Prop()
+  @Prop({ type: String, ref: 'User', required: true })
+  user: string;
+
+  @Prop({ default: 0 })
   day: number;
 
-  @Prop({ type: String, ref: 'User' })
-  userId: string;
-
   @Prop({ default: 1 })
-  quranPage: number;
+  page: number;
 
-  @Prop({ default: Date.now() })
-  createdAt: Date;
-
-  @Prop({ default: Date.now() })
-  updatedAt: Date;
+  @Prop({ default: 0 })
+  streak: number;
 }
 
 export const QuranSessionSchema = SchemaFactory.createForClass(QuranSession);

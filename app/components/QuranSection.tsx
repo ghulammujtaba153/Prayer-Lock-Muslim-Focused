@@ -16,10 +16,11 @@ interface QuranPageData {
 }
 
 interface QuranSectionProps {
+  pageNumber: number;
   onNext: () => void;
 }
 
-export default function QuranSection({ onNext }: QuranSectionProps) {
+export default function QuranSection({ pageNumber, onNext }: QuranSectionProps) {
   const [data, setData] = useState<QuranPageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +30,7 @@ export default function QuranSection({ onNext }: QuranSectionProps) {
       setLoading(true);
       setError(null);
       try {
-        const res = await axiosInstance.get(`/quran/1`);
+        const res = await axiosInstance.get(`/quran/${pageNumber}`);
         setData(res.data);
       } catch (err) {
         console.error('Failed to fetch Quran page:', err);
@@ -40,7 +41,7 @@ export default function QuranSection({ onNext }: QuranSectionProps) {
     }
 
     fetchPage();
-  }, []);
+  }, [pageNumber]);
 
   if (loading) {
     return (
@@ -63,11 +64,11 @@ export default function QuranSection({ onNext }: QuranSectionProps) {
     <div className="flex flex-col gap-6 animate-fade-in">
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
-          <span className="w-8 h-8 rounded-lg bg-accent/10 text-accent flex items-center justify-center text-sm">1</span>
-          The Opening
+          <span className="w-8 h-8 rounded-lg bg-accent/10 text-accent flex items-center justify-center text-sm">{data.page}</span>
+          {data.ayahs[0]?.surah || 'Quranic Verses'}
         </h2>
         <span className="text-sm font-medium text-slate-400 bg-slate-100 dark:bg-dark-card px-3 py-1 rounded-full uppercase tracking-widest">
-          Al-Faatiha
+          {data.ayahs[0]?.surah || 'Loading...'}
         </span>
       </div>
 

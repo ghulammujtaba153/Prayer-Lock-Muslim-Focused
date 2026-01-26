@@ -1,15 +1,29 @@
 'use client';
 
 import { useState } from 'react';
-import Image from "next/image";
 import QuranSection from "@/components/QuranSection";
 import DuasSection from "@/components/DuasSection";
+import SessionHistory from "@/components/SessionHistory";
+import { useAuth } from "@/context/authContext";
+import { axiosInstance } from "@/config/url";
+
 
 export default function Home() {
+  const { user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState<'quran' | 'dua'>('quran');
+  const [historyKey, setHistoryKey] = useState(0); // For refreshing history
+  const [nextPage, setNextPage] = useState<number>(1);
 
-  const startSession = () => {
+  const startSession = async () => {
+    if (user?.id) {
+      try {
+        const res = await axiosInstance.get(`/quran/next-page/${user.id}`);
+        setNextPage(res.data.nextPage);
+      } catch (error) {
+        console.error("Failed to fetch next page:", error);
+      }
+    }
     setCurrentStep('quran');
     setIsModalOpen(true);
   };
@@ -20,6 +34,21 @@ export default function Home() {
 
   const proceedToDua = () => {
     setCurrentStep('dua');
+  };
+
+  const handleSessionComplete = async () => {
+    if (!user?.id) return;
+    try {
+      await axiosInstance.post('/quran/session', {
+        userId: user.id,
+        page: nextPage,
+      });
+      setHistoryKey(prev => prev + 1);
+    } catch (error) {
+      console.error("Failed to record session:", error);
+    } finally {
+      setIsModalOpen(false);
+    }
   };
 
   return (
@@ -92,13 +121,15 @@ export default function Home() {
             </button>
 
             {currentStep === 'quran' ? (
-              <QuranSection onNext={proceedToDua} />
+              <QuranSection pageNumber={nextPage} onNext={proceedToDua} />
             ) : (
-              <DuasSection onClose={closeSession} />
+              <DuasSection onComplete={handleSessionComplete} />
             )}
           </div>
         </div>
       )}
+
+      <SessionHistory key={historyKey} />
     </main>
   );
 }

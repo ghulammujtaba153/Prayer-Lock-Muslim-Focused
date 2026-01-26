@@ -3,7 +3,7 @@
 import React from "react";
 import { data } from "@/lib/duas";
 
-export default function DuasSection({ onClose }: { onClose: () => void }) {
+export default function DuasSection({ onComplete }: { onComplete: () => void }) {
   // Get day of week (0-6, where 0 is Sunday)
   // Our data is Day 1 - Day 7
   // Let's map Sunday to Day 7, Monday to Day 1, etc.
@@ -50,7 +50,7 @@ export default function DuasSection({ onClose }: { onClose: () => void }) {
 
       <div className="pt-4">
         <button
-          onClick={onClose}
+          onClick={onComplete}
           className="w-full py-4 bg-slate-800 dark:bg-slate-100 text-white dark:text-slate-900 rounded-2xl font-bold shadow-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 group text-lg"
         >
           Complete Session
