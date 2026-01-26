@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { api,axiosInstance } from '../config/url';
 
 interface Ayah {
   ayahNumber: number;
@@ -28,12 +29,8 @@ export default function QuranSection({ onNext }: QuranSectionProps) {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`http://localhost:5000/quran/1`);
-        if (!res.ok) {
-          throw new Error(`Failed to fetch: ${res.statusText}`);
-        }
-        const json = await res.json();
-        setData(json);
+        const res = await axiosInstance.get(`/quran/1`);
+        setData(res.data);
       } catch (err) {
         console.error('Failed to fetch Quran page:', err);
         setError('Failed to load Quranic content. Please ensure the server is running.');
