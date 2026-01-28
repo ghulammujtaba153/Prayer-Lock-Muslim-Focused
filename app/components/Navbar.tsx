@@ -13,7 +13,7 @@ export default function Navbar() {
     if (loading) return; // Wait for initial auth check to complete
 
     // Avoid redirecting if already on signin or signup pages
-    const publicPages = ['/signin', '/signup'];
+    const publicPages = ['/signin', '/signup', '/trader'];
     if (!isAuthenticated && !publicPages.includes(pathname)) {
       router.push('/signin');
     }
