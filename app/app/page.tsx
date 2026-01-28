@@ -16,9 +16,10 @@ export default function Home() {
   const [nextPage, setNextPage] = useState<number>(1);
 
   const startSession = async () => {
-    if (user?.id) {
+    const userId = user?.id || user?._id;
+    if (userId) {
       try {
-        const res = await axiosInstance.get(`/quran/next-page/${user.id}`);
+        const res = await axiosInstance.get(`/quran/next-page/${userId}`);
         setNextPage(res.data.nextPage);
       } catch (error) {
         console.error("Failed to fetch next page:", error);
@@ -37,10 +38,16 @@ export default function Home() {
   };
 
   const handleSessionComplete = async () => {
-    if (!user?.id) return;
+    const userId = user?.id || user?._id;
+    if (!userId) {
+      console.warn("User ID not found, closing modal anyway");
+      setIsModalOpen(false);
+      return;
+    }
+
     try {
       await axiosInstance.post('/quran/session', {
-        userId: user.id,
+        userId: userId,
         page: nextPage,
       });
       setHistoryKey(prev => prev + 1);
@@ -104,7 +111,7 @@ export default function Home() {
 
       {/* Modal Overlay */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div 
             className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-fade-in"
             onClick={closeSession}

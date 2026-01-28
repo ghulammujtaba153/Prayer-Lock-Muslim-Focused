@@ -48,10 +48,10 @@ export default function DuasSection({ onComplete }: { onComplete: () => void }) 
         </div>
       </div>
 
-      <div className="pt-4">
+      <div className="pt-4 relative z-10">
         <button
           onClick={onComplete}
-          className="w-full py-4 bg-slate-800 dark:bg-slate-100 text-white dark:text-slate-900 rounded-2xl font-bold shadow-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 group text-lg"
+          className="w-full py-4 bg-slate-800 dark:bg-slate-100 text-white dark:text-slate-900 rounded-2xl font-bold shadow-xl hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group text-lg cursor-pointer"
         >
           Complete Session
           <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20">

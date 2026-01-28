@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { api,axiosInstance } from '../config/url';
+import { axiosInstance } from '../config/url';
 
 interface Ayah {
   ayahNumber: number;

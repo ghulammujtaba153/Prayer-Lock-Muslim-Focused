@@ -5,6 +5,7 @@ import { axiosInstance } from '@/config/url';
 
 interface User {
   id: string;
+  _id?: string;
   name: string;
   email: string;
   streak: number;
