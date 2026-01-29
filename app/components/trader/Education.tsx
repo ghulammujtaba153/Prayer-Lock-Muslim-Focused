@@ -1,5 +1,6 @@
-import React from 'react';
-import { MdPlayCircleOutline } from 'react-icons/md';
+import React, { useState } from 'react';
+import { MdPlayCircleOutline, MdPlayArrow } from 'react-icons/md';
+import EducationDetail from './EducationDetail';
 
 const data = [
     "https://www.youtube.com/shorts/tvO21iW1yZ0",
@@ -10,13 +11,23 @@ const data = [
 ];
 
 const Education = () => {
-    // Helper to convert shorts URL to embed URL
-    // From: https://www.youtube.com/shorts/tvO21iW1yZ0
-    // To: https://www.youtube.com/embed/tvO21iW1yZ0
-    const getEmbedUrl = (url: string) => {
+    const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
+    // Helper to get thumbnail URL from YouTube ID
+    const getThumbnailUrl = (url: string) => {
         const id = url.split('/').pop()?.split('?')[0];
-        return `https://www.youtube-nocookie.com/embed/${id}`;
+        return `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
     };
+
+    if (selectedIndex !== null) {
+        return (
+            <EducationDetail 
+                videos={data} 
+                initialIndex={selectedIndex} 
+                onClose={() => setSelectedIndex(null)} 
+            />
+        );
+    }
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -34,16 +45,20 @@ const Education = () => {
                 {data.map((url, index) => (
                     <div 
                         key={index}
-                        className="group relative bg-[#1e2329] rounded-2xl overflow-hidden border border-[#2b2f36] shadow-xl transition-all duration-300 hover:border-yellow-500/50 hover:shadow-yellow-500/10 hover:-translate-y-1"
+                        onClick={() => setSelectedIndex(index)}
+                        className="group relative bg-[#1e2329] rounded-2xl overflow-hidden border border-[#2b2f36] shadow-xl transition-all duration-300 hover:border-yellow-500/50 hover:shadow-yellow-500/10 hover:-translate-y-1 cursor-pointer"
                     >
-                        <div className="aspect-[9/16] w-full">
-                            <iframe
-                                src={getEmbedUrl(url)}
-                                title={`Trading Education Short ${index + 1}`}
-                                className="w-full h-full border-0"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                allowFullScreen
-                            ></iframe>
+                        <div className="aspect-[9/16] w-full relative">
+                            <img 
+                                src={getThumbnailUrl(url)} 
+                                alt={`Trading Education Short ${index + 1}`}
+                                className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center shadow-2xl scale-75 group-hover:scale-100 transition-transform">
+                                    <MdPlayArrow className="text-black text-3xl" />
+                                </div>
+                            </div>
                         </div>
                         <div className="p-4 bg-gradient-to-t from-[#0b0e11] to-transparent">
                             <div className="flex items-center gap-2 mb-1">

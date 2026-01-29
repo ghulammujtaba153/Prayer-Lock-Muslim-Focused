@@ -3,10 +3,11 @@
 import React, { useState } from "react"
 import Calculator from "@/components/trader/Calculator"
 import Education from "@/components/trader/Education"
-import { MdCalculate, MdSchool } from "react-icons/md"
+import Trends from "@/components/trader/Trends"
+import { MdCalculate, MdSchool, MdTrendingUp } from "react-icons/md"
 
 const TraderPage = () => {
-    const [activeTab, setActiveTab] = useState<"calculator" | "education">("calculator")
+    const [activeTab, setActiveTab] = useState<"calculator" | "education" | "trends">("calculator")
 
     return (
         <div className="min-h-screen text-[#eaecef]">
@@ -36,12 +37,26 @@ const TraderPage = () => {
                             <MdSchool size={20} />
                             Education
                         </button>
+
+                        <button
+                            onClick={() => setActiveTab("trends")}
+                            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
+                                activeTab === "trends"
+                                    ? "bg-[#2b3139] text-yellow-500 shadow-lg scale-105"
+                                    : "text-[#848e9c] hover:text-white"
+                            }`}
+                        >
+                            <MdTrendingUp size={20} />
+                            Trends
+                        </button>
                     </div>
                 </div>
 
                 {/* Content Area */}
                 <div className="transition-all duration-300">
-                    {activeTab === "calculator" ? <Calculator /> : <Education />}
+                    {activeTab === "calculator" && <Calculator />}
+                    {activeTab === "education" && <Education />}
+                    {activeTab === "trends" && <Trends />}
                 </div>
             </div>
         </div>
