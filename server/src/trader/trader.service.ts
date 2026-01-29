@@ -29,18 +29,33 @@ export class TraderService {
   async getEconomicTrends(): Promise<EconomicTrends> {
     const now = new Date();
     const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const dateStr = now.toDateString();
 
     try {
       // 1. Check if we have cached data for this month
       const cachedTrend = await this.trendModel.findOne({ monthKey });
       if (cachedTrend) {
-        console.log(`[TraderService] Returning cached trends for ${monthKey}`);
-        return cachedTrend.data as EconomicTrends;
+        // Auto-refresh if the data contains old years (2024/2023)
+        const dataStr = JSON.stringify(cachedTrend.data);
+        const isStale = dataStr.includes('2024') || dataStr.includes('2023');
+
+        if (!isStale) {
+          console.log(
+            `[TraderService] Returning cached trends for ${monthKey}`,
+          );
+          return cachedTrend.data as EconomicTrends;
+        }
+        console.log(
+          `[TraderService] Stale data detected for ${monthKey}, re-fetching from Gemini...`,
+        );
       }
 
-      console.log(`[TraderService] Fetching new trends from Gemini for ${monthKey}`);
+      console.log(
+        `[TraderService] Fetching new trends from Gemini for ${monthKey}`,
+      );
 
-      const prompt = `Return a JSON object with the latest US economic data:
+      const prompt = `Today's date is ${dateStr}. Return a JSON object with the LATEST available US economic data as of this date. 
+        Do not provide historical data from 2024 or earlier if there is no data available then u can return the data from 2024. Search for the most recent values for:
         1. Fed Funds Rate Target
         2. Next FOMC Meeting Date
         3. Rate Decision Probabilities (hike, hold, cut)
