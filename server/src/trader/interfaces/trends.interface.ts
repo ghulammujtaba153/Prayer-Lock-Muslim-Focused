@@ -1,22 +1,40 @@
+export interface TrendValue {
+  current: string;
+  previous: string[]; // Last 3 historical values
+  indicator: 'up' | 'down' | 'neutral';
+  sentiment: 'bullish' | 'bearish' | 'neutral';
+}
+
 export interface EconomicTrends {
-  fedFundsRate: string;
-  nextFomcMeeting: string;
-  rateDecisionProbability: {
-    hike: string;
-    hold: string;
-    cut: string;
+  fomc: {
+    nextMeeting: string;
+    previousMeetings: string[];
+    sentiment: string;
   };
-  fedBalanceSheet: string;
+  interestRate: TrendValue;
   inflation: {
-    cpi: { yoy: string; mom: string };
-    coreCpi: string;
-    pce: string;
+    cpi: TrendValue;
+    coreCpi: TrendValue;
+    pce: TrendValue;
     nextRelease: string;
   };
-  dxyIndex: string;
-  laborMarket: {
-    unemploymentRate: string;
-    nonFarmPayrolls: string;
+  jobsData: {
+    unemployment: TrendValue;
+    nonFarmPayrolls: TrendValue;
+  };
+  goldPrice: TrendValue;
+  dxyIndex: TrendValue;
+  btcDominance: TrendValue;
+  etfFlows: {
+    dailyNet: TrendValue;
+    totalWeekly: string;
+  };
+  riskIndicators: {
+    vix: TrendValue;
+    fearGreed: TrendValue;
+  };
+  fedBalanceSheet: TrendValue & {
+    mode: 'QE' | 'QT' | 'Neutral';
   };
   lastUpdated: string;
 }

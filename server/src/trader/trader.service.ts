@@ -28,70 +28,85 @@ export class TraderService {
 
   async getEconomicTrends(): Promise<EconomicTrends> {
     const now = new Date();
-    const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const dayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const dateStr = now.toDateString();
 
     try {
-      // 1. Check if we have cached data for this month
-      const cachedTrend = await this.trendModel.findOne({ monthKey });
-      if (cachedTrend) {
-        // Auto-refresh if the data contains old years (2024/2023)
-        const dataStr = JSON.stringify(cachedTrend.data);
-        const isStale = dataStr.includes('2024') || dataStr.includes('2023');
+      // 1. Force cleanup: Delete any records using the old month-only format (YYYY-MM)
+      await this.trendModel.deleteMany({
+        $expr: { $lt: [{ $strLenCP: '$monthKey' }, 10] },
+      });
 
-        if (!isStale) {
-          console.log(
-            `[TraderService] Returning cached trends for ${monthKey}`,
-          );
-          return cachedTrend.data as EconomicTrends;
-        }
-        console.log(
-          `[TraderService] Stale data detected for ${monthKey}, re-fetching from Gemini...`,
-        );
+      const cachedTrend = await this.trendModel.findOne({ monthKey: dayKey });
+      if (cachedTrend && cachedTrend.data && (cachedTrend.data as any).fomc) {
+        console.log(`[TraderService] Returning cached trends for ${dayKey}`);
+        return cachedTrend.data as EconomicTrends;
       }
 
+      // If we didn't find dayKey, check if there's any record that is missing 'fomc' and delete it to prevent confusion
+      await this.trendModel.deleteMany({ 'data.fomc': { $exists: false } });
+
       console.log(
-        `[TraderService] Fetching new trends from Gemini for ${monthKey}`,
+        `[TraderService] Fetching new trends from Gemini for ${dayKey}`,
       );
 
-      const prompt = `Today's date is ${dateStr}. Return a JSON object with the LATEST available US economic data as of this date. 
-        Do not provide historical data from 2024 or earlier if there is no data available then u can return the data from 2024. Search for the most recent values for:
-        1. Fed Funds Rate Target
-        2. Next FOMC Meeting Date
-        3. Rate Decision Probabilities (hike, hold, cut)
-        4. Fed Balance Sheet (QE/QT)
-        5. CPI (YoY, MoM)
-        6. Core CPI (YoY)
-        7. PCE Inflation (YoY)
-        8. Next CPI Release Date
-        9. DXY Index Value
-        10. Unemployment Rate and Non-Farm Payrolls
+      const prompt = `Today's date is ${dateStr}. You are a high-precision financial data analyst. 
+Return a strictly valid JSON object containing the 10 Key Fundamental Indicators for financial traders. 
 
-        JSON Structure:
-        {
-          "fedFundsRate": "string",
-          "nextFomcMeeting": "string",
-          "rateDecisionProbability": { "hike": "string", "hold": "string", "cut": "string" },
-          "fedBalanceSheet": "string",
-          "inflation": {
-            "cpi": { "yoy": "string", "mom": "string" },
-            "coreCpi": "string",
-            "pce": "string",
-            "nextRelease": "string"
-          },
-          "dxyIndex": "string",
-          "laborMarket": { "unemploymentRate": "string", "nonFarmPayrolls": "string" },
-          "lastUpdated": "string (ISO)"
-        }`;
+### DATA INTEGRITY RULES:
+1. USE REAL-TIME DATA: Provide the most recent actual figures available as of ${dateStr}.
+2. NO HALLUCINATIONS: If a specific "previous" value is unavailable, use "N/A" rather than inventing a number or using old 2024 data.
+3. TREND LOGIC: 'indicator' ('up'|'down'|'neutral') must compare 'current' to the immediate most recent value in the 'previous' array.
+4. SENTIMENT LOGIC: 'sentiment' ('bullish'|'bearish'|'neutral') must reflect the impact on RISK ASSETS (Equities/Crypto). (e.g., High Inflation = Bearish).
+5. FORMATTING: Use raw numbers (strings) for values (e.g., "75.2B" or "3.4%").
 
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const text: string = response.text();
+### JSON STRUCTURE (MUST FOLLOW EXACTLY):
+{
+  "fomc": { 
+    "nextMeeting": "string (YYYY-MM-DD)", 
+    "previousMeetings": ["string", "string", "string"], 
+    "sentiment": "string (brief market impact explanation)" 
+  },
+  "interestRate": { "current": "string", "previous": ["string", "string", "string"], "indicator": "up|down|neutral", "sentiment": "bullish|bearish|neutral" },
+  "inflation": {
+    "cpi": { "current": "string", "previous": ["string", "string", "string"], "indicator": "up|down|neutral", "sentiment": "bullish|bearish|neutral" },
+    "coreCpi": { "current": "string", "previous": ["string", "string", "string"], "indicator": "up|down|neutral", "sentiment": "bullish|bearish|neutral" },
+    "pce": { "current": "string", "previous": ["string", "string", "string"], "indicator": "up|down|neutral", "sentiment": "bullish|bearish|neutral" },
+    "nextRelease": "string"
+  },
+  "jobsData": {
+    "unemployment": { "current": "string", "previous": ["string", "string", "string"], "indicator": "up|down|neutral", "sentiment": "bullish|bearish|neutral" },
+    "nonFarmPayrolls": { "current": "string", "previous": ["string", "string", "string"], "indicator": "up|down|neutral", "sentiment": "bullish|bearish|neutral" }
+  },
+  "goldPrice": { "current": "string", "previous": ["string", "string", "string"], "indicator": "up|down|neutral", "sentiment": "bullish|bearish|neutral" },
+  "dxyIndex": { "current": "string", "previous": ["string", "string", "string"], "indicator": "up|down|neutral", "sentiment": "bullish|bearish|neutral" },
+  "btcDominance": { "current": "string", "previous": ["string", "string", "string"], "indicator": "up|down|neutral", "sentiment": "bullish|bearish|neutral" },
+  "etfFlows": {
+    "dailyNet": { "current": "string", "previous": ["string", "string", "string"], "indicator": "up|down|neutral", "sentiment": "bullish|bearish|neutral" },
+    "totalWeekly": "string"
+  },
+  "riskIndicators": {
+    "vix": { "current": "string", "previous": ["string", "string", "string"], "indicator": "up|down|neutral", "sentiment": "bullish|bearish|neutral" },
+    "fearGreed": { "current": "string", "previous": ["string", "string", "string"], "indicator": "up|down|neutral", "sentiment": "bullish|bearish|neutral" }
+  },
+  "fedBalanceSheet": {
+    "current": "string",
+    "previous": ["string", "string", "string"],
+    "indicator": "up|down|neutral",
+    "sentiment": "bullish|bearish|neutral",
+    "mode": "QE|QT|Neutral"
+  },
+  "lastUpdated": "string (ISO Timestamp)"
+}`;
+
+      const result = await (this.model as any).generateContent(prompt);
+      const response = await (result as any).response;
+      const text: string = (response as any).text();
       const parsedData = JSON.parse(text) as EconomicTrends;
 
       // 2. Save fetched data to DB
       await this.trendModel.findOneAndUpdate(
-        { monthKey },
+        { monthKey: dayKey },
         { data: parsedData },
         { upsert: true, new: true },
       );

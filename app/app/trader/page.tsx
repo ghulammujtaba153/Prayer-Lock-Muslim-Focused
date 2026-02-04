@@ -4,10 +4,11 @@ import React, { useState } from "react"
 import Calculator from "@/components/trader/Calculator"
 import Education from "@/components/trader/Education"
 import Trends from "@/components/trader/Trends"
-import { MdCalculate, MdSchool, MdTrendingUp } from "react-icons/md"
+import OptionTrading from "@/components/trader/OptionTrading"
+import { MdCalculate, MdSchool, MdTrendingUp, MdOutlineDonutLarge } from "react-icons/md"
 
 const TraderPage = () => {
-    const [activeTab, setActiveTab] = useState<"calculator" | "education" | "trends">("calculator")
+    const [activeTab, setActiveTab] = useState<"calculator" | "education" | "trends" | "options">("calculator")
 
     return (
         <div className="min-h-screen text-[#eaecef]">
@@ -24,7 +25,18 @@ const TraderPage = () => {
                             }`}
                         >
                             <MdCalculate size={20} />
-                            Calculator
+                            Futures
+                        </button>
+                        <button
+                            onClick={() => setActiveTab("options")}
+                            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
+                                activeTab === "options"
+                                    ? "bg-[#2b3139] text-yellow-500 shadow-lg scale-105"
+                                    : "text-[#848e9c] hover:text-white"
+                            }`}
+                        >
+                            <MdOutlineDonutLarge size={20} />
+                            Options
                         </button>
                         <button
                             onClick={() => setActiveTab("education")}
@@ -55,6 +67,7 @@ const TraderPage = () => {
                 {/* Content Area */}
                 <div className="transition-all duration-300">
                     {activeTab === "calculator" && <Calculator />}
+                    {activeTab === "options" && <OptionTrading />}
                     {activeTab === "education" && <Education />}
                     {activeTab === "trends" && <Trends />}
                 </div>
