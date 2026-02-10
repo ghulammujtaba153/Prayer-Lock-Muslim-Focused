@@ -7,11 +7,24 @@ import {
 import { FaBitcoin, FaCoins } from 'react-icons/fa';
 import { axiosInstance } from '@/config/url';
 
+interface MarketDetails {
+  dayLow?: number;
+  dayHigh?: number;
+  yearLow?: number;
+  yearHigh?: number;
+  priceAvg50?: number;
+  priceAvg200?: number;
+  volume?: number;
+  open?: number;
+  previousClose?: number;
+}
+
 interface TrendValue {
   current: string;
   previous: string[];
   indicator: 'up' | 'down' | 'neutral';
   sentiment: 'bullish' | 'bearish' | 'neutral';
+  details?: MarketDetails;
 }
 
 interface EconomicTrends {
@@ -65,14 +78,50 @@ const IndicatorCard = ({ title, data, icon: Icon, detailLabel }: { title: string
         {detailLabel && <p className="text-[#848e9c] text-xs mt-1">{detailLabel}</p>}
       </div>
 
+      {data.details && (
+        <div className="mt-4 grid grid-cols-2 gap-y-3 bg-[#0b0e11]/50 p-3 rounded-xl border border-[#2b2f36]">
+          {data.details.dayLow && data.details.dayHigh && (
+            <div className="col-span-2">
+              <div className="flex justify-between text-[10px] text-[#848e9c] uppercase mb-1 font-semibold">
+                <span>Day Range</span>
+                <span className="text-white font-mono">{data.details.dayLow} - {data.details.dayHigh}</span>
+              </div>
+              <div className="h-1 bg-[#2b3139] rounded-full overflow-hidden">
+                <div className="h-full bg-yellow-500/40 w-[60%] ml-[20%]" />
+              </div>
+            </div>
+          )}
+          {data.details.yearLow && data.details.yearHigh && (
+             <div className="col-span-2">
+              <div className="flex justify-between text-[10px] text-[#848e9c] uppercase mb-1 font-semibold">
+                <span>Year Range</span>
+                <span className="text-white font-mono">{data.details.yearLow} - {data.details.yearHigh}</span>
+              </div>
+            </div>
+          )}
+          {data.details.volume && (
+            <div className="flex flex-col">
+              <span className="text-[9px] text-[#848e9c] uppercase font-bold">Vol</span>
+              <span className="text-[11px] text-white font-mono">{(data.details.volume / 1000).toFixed(0)}K</span>
+            </div>
+          )}
+          {data.details.previousClose && (
+            <div className="flex flex-col items-end">
+              <span className="text-[9px] text-[#848e9c] uppercase font-bold">Prev Close</span>
+              <span className="text-[11px] text-white font-mono">{data.details.previousClose}</span>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="mt-4 pt-4 border-t border-[#2b2f36]">
         <p className="text-[10px] text-[#848e9c] mb-2 uppercase tracking-tighter font-semibold">Previous Releases</p>
         <div className="flex gap-2">
-          {data?.previous?.map((val, i) => (
+          {data?.previous?.length > 0 ? data.previous.map((val, i) => (
             <div key={i} className="flex-1 bg-[#0b0e11] py-1 px-2 rounded text-[11px] text-[#848e9c] text-center font-mono">
               {val}
             </div>
-          )) || <span className="text-[10px] text-[#848e9c]">N/A</span>}
+          )) : <div className="text-[10px] text-[#848e9c] italic">No historical data</div>}
         </div>
       </div>
     </div>
