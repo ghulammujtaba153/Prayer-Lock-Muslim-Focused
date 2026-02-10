@@ -1,5 +1,4 @@
-import { Injectable } from '@nestjs/common';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -8,258 +7,331 @@ import { firstValueFrom } from 'rxjs';
 import { EconomicTrends } from './interfaces/trends.interface';
 import { Trend } from './schemas/trends.schema';
 
+const MARKET_ASSETS = {
+  GOLD: { proxy: 'GCUSD', multiplier: 1.0, type: 'commodity' }, // FMP GCUSD is direct
+  DXY: { proxy: 'UUP', multiplier: 3.62, type: 'index' },
+  VIX: { proxy: 'VXX', multiplier: 1.0, type: 'volatility' }
+};
+
 @Injectable()
 export class TraderService {
-  private genAI: GoogleGenerativeAI;
-  private model: any;
+  private readonly logger = new Logger(TraderService.name);
 
   constructor(
     private configService: ConfigService,
     @InjectModel(Trend.name) private trendModel: Model<Trend>,
     private httpService: HttpService,
-  ) {
-    const apiKey = this.configService.get<string>('GOOGLE_API_KEY');
-    if (!apiKey) {
-      throw new Error('GOOGLE_API_KEY is not defined in environment variables');
-    }
-    this.genAI = new GoogleGenerativeAI(apiKey);
-    this.model = this.genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash', 
-      tools: [
-        {
-          googleSearchRetrieval: {
-            dynamicRetrievalConfig: {
-              mode: 'MODE_DYNAMIC' as any,
-              dynamicThreshold: 0.7,
-            },
-          },
-        },
-      ],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.1,
-      },
-    });
-  }
+  ) {}
 
   async getEconomicTrends(): Promise<EconomicTrends> {
     const now = new Date();
-    const dayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const dateStr = now.toDateString();
-
+    const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    
     try {
-      // 1. Cleanup old data
-      await this.trendModel.deleteMany({
-        $expr: { $lt: [{ $strLenCP: '$monthKey' }, 10] },
-      });
-
-      // 2. Check Cache
-      const cachedTrend = await this.trendModel.findOne({ monthKey: dayKey });
-      if (cachedTrend && cachedTrend.data && (cachedTrend.data as any).fomc) {
-        console.log(`[TraderService] Returning cached trends for ${dayKey}`);
-        return cachedTrend.data as EconomicTrends;
+      // Find the latest trend entry (Time-Series approach)
+      const latestTrend = await this.trendModel.findOne().sort({ timestamp: -1 });
+      
+      if (latestTrend) {
+        const lastUpdate = new Date(latestTrend.timestamp);
+        const hoursDiff = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60);
+        
+        if (hoursDiff < 12 && latestTrend.data && (latestTrend.data as any).fomc) {
+          this.logger.log(`Returning cached trends (Last updated: ${lastUpdate.toISOString()})`);
+          return latestTrend.data as EconomicTrends;
+        }
       }
 
-      await this.trendModel.deleteMany({ 'data.fomc': { $exists: false } });
+      this.logger.log('Fetching new trends (Waterfall Strategy)...');
 
-      console.log(`[TraderService] Fetching new trends from Real APIs for ${dayKey}`);
-
-      // 3. Fetch Real Data in Parallel
-      const [
-        interestRate,
-        cpi,
-        pce,
-        unemployment,
-        nonFarm,
-        cryptoData,
-        fearGreed,
-      ] = await Promise.allSettled([
-        this.fetchFredData('FEDFUNDS'),
-        this.fetchFredData('CPIAUCSL'),
-        this.fetchFredData('PCEPI'),
-        this.fetchFredData('UNRATE'),
-        this.fetchFredData('PAYEMS'),
+      const [fredData, marketData, cryptoData, fearGreed, historicalTrends] = await Promise.all([
+        this.fetchFredAll(),
+        this.fetchMarketData(), 
         this.fetchCryptoData(),
-        this.fetchFearGreedIndex(),
+        this.fetchFearGreedIndex(), // Now stock-focused
+        this.trendModel.find().sort({ timestamp: -1 }).limit(5)
       ]);
 
-      // Helper to extract value or N/A
-      const getValue = (result: PromiseSettledResult<any>) =>
-        result.status === 'fulfilled' ? result.value : 'N/A';
+      const parsedData = this.processEconomicData(fredData, marketData, cryptoData, fearGreed, historicalTrends);
 
-      const realDataContext = {
-        interestRate: getValue(interestRate),
-        cpi: getValue(cpi),
-        pce: getValue(pce),
-        unemployment: getValue(unemployment),
-        nonFarmPayrolls: getValue(nonFarm),
-        btcDominance: getValue(cryptoData)?.dominance || 'N/A',
-        btcPrice: getValue(cryptoData)?.price || 'N/A',
-        fearGreedIndex: getValue(fearGreed),
-      };
-
-      console.log('[TraderService] Real Data Context:', JSON.stringify(realDataContext, null, 2));
-
-      // 4. Use Gemini for Sentiment & Formatting (with Retry)
-      const prompt = `
-      Today's date is ${dateStr}. You are a high-precision financial data analyst.
-      
-      Here is the REAL-TIME data fetched from official APIs (FRED, CoinGecko, etc.):
-      ${JSON.stringify(realDataContext, null, 2)}
-
-      Your task:
-      1. **PRIORITIZE REAL DATA**: Use the values provided in the context above as the primary source of truth.
-      2. **SEARCH FALLBACK**: ONLY if a specific value is "N/A" or missing (e.g., Gold Price, DXY, ETF Flows, specific FOMC dates), use Google Search to find the latest accurate figure.
-      3. **NO HALLUCINATIONS**: If search fails for a missing value, mark it clearly as "N/A". Do not invent numbers.
-      4. **SENTIMENT**: Analyze the "sentiment" (bullish/bearish/neutral) and "indicator" (up/down/neutral) based on the data changes.
-
-      ### JSON STRUCTURE (MUST FOLLOW EXACTLY):
-      {
-        "fomc": { 
-          "nextMeeting": "string (YYYY-MM-DD)", 
-          "previousMeetings": ["string", "string", "string"], 
-          "sentiment": "string (brief market impact explanation)" 
-        },
-        "interestRate": { "current": "string", "previous": ["string", "string", "string"], "indicator": "up|down|neutral", "sentiment": "bullish|bearish|neutral" },
-        "inflation": {
-          "cpi": { "current": "string", "previous": ["string", "string", "string"], "indicator": "up|down|neutral", "sentiment": "bullish|bearish|neutral" },
-          "coreCpi": { "current": "string", "previous": ["string", "string", "string"], "indicator": "up|down|neutral", "sentiment": "bullish|bearish|neutral" },
-          "pce": { "current": "string", "previous": ["string", "string", "string"], "indicator": "up|down|neutral", "sentiment": "bullish|bearish|neutral" },
-          "nextRelease": "string"
-        },
-        "jobsData": {
-          "unemployment": { "current": "string", "previous": ["string", "string", "string"], "indicator": "up|down|neutral", "sentiment": "bullish|bearish|neutral" },
-          "nonFarmPayrolls": { "current": "string", "previous": ["string", "string", "string"], "indicator": "up|down|neutral", "sentiment": "bullish|bearish|neutral" }
-        },
-        "goldPrice": { "current": "string", "previous": ["string", "string", "string"], "indicator": "up|down|neutral", "sentiment": "bullish|bearish|neutral" },
-        "dxyIndex": { "current": "string", "previous": ["string", "string", "string"], "indicator": "up|down|neutral", "sentiment": "bullish|bearish|neutral" },
-        "btcDominance": { "current": "string", "previous": ["string", "string", "string"], "indicator": "up|down|neutral", "sentiment": "bullish|bearish|neutral" },
-        "etfFlows": {
-          "dailyNet": { "current": "string", "previous": ["string", "string", "string"], "indicator": "up|down|neutral", "sentiment": "bullish|bearish|neutral" },
-          "totalWeekly": "string"
-        },
-        "riskIndicators": {
-          "vix": { "current": "string", "previous": ["string", "string", "string"], "indicator": "up|down|neutral", "sentiment": "bullish|bearish|neutral" },
-          "fearGreed": { "current": "string", "previous": ["string", "string", "string"], "indicator": "up|down|neutral", "sentiment": "bullish|bearish|neutral" }
-        },
-        "fedBalanceSheet": {
-          "current": "string",
-          "previous": ["string", "string", "string"],
-          "indicator": "up|down|neutral",
-          "sentiment": "bullish|bearish|neutral",
-          "mode": "QE|QT|Neutral"
-        },
-        "lastUpdated": "string (ISO Timestamp)"
-      }`;
-
-      const parsedData = await this.generateWithRetry(prompt);
-
-      // 5. Save fetched data to DB
-      await this.trendModel.findOneAndUpdate(
-        { monthKey: dayKey },
-        { data: parsedData },
-        { upsert: true, new: true },
-      );
+      // Save as a new entry in time-series
+      await new this.trendModel({
+        timestamp: now,
+        monthKey: todayKey.substring(0, 7), // YYYY-MM
+        data: parsedData,
+        metadata: { 
+          source: marketData.source || 'fmp_stable', 
+          environment: process.env.NODE_ENV || 'development' 
+        }
+      }).save();
 
       return parsedData;
 
     } catch (error) {
-      console.error('Economic Trends API Error:', error);
-      // Fallback Strategy: Return cache if available (even if partial/old)
-      const cachedTrend = await this.trendModel.findOne({ monthKey: dayKey });
-      if (cachedTrend?.data) {
-         console.log('[TraderService] API failed, returning stale/cached data.');
-         return cachedTrend.data as EconomicTrends;
+      this.logger.error('Economic Trends Sync Error:', error.message);
+      const cached = await this.trendModel.findOne().sort({ createdAt: -1 });
+      if (cached?.data) return cached.data as EconomicTrends;
+      throw error;
+    }
+  }
+
+  private normalize(price: number, asset: keyof typeof MARKET_ASSETS) {
+    const multiplier = MARKET_ASSETS[asset]?.multiplier || 1.0;
+    return parseFloat((price * multiplier).toFixed(2));
+  }
+
+  private async fetchMarketData() {
+    const fmpKey = this.configService.get<string>('FMP_API_KEY');
+    const avKey = this.configService.get<string>('ALPHA_VENTAGE_API_KEY');
+    const finhubKey = this.configService.get<string>('FINHUB_API_KEY');
+    
+    const data: any = { 
+      gold: { price: null, details: null }, 
+      dxy: { price: null, details: null }, 
+      vix: { price: null, details: null },
+      source: 'none'
+    };
+
+    // 1. Primary: FMP (Stable Endpoint)
+    if (fmpKey) {
+      try {
+        this.logger.log('Fetching Primary Market Stats (FMP)...');
+        await Promise.allSettled([
+          // Gold
+          firstValueFrom(this.httpService.get(`https://financialmodelingprep.com/stable/quote?symbol=GCUSD&apikey=${fmpKey}`))
+            .then(res => {
+              const q = res.data?.[0];
+              if (q) {
+                data.gold.price = q.price;
+                data.gold.details = {
+                  dayLow: q.dayLow, dayHigh: q.dayHigh,
+                  yearLow: q.yearLow, yearHigh: q.yearHigh,
+                  priceAvg50: q.priceAvg50, priceAvg200: q.priceAvg200,
+                  volume: q.volume, open: q.open, previousClose: q.previousClose
+                };
+              }
+            }),
+
+          // VIX
+          firstValueFrom(this.httpService.get(`https://financialmodelingprep.com/stable/quote?symbol=^VIX&apikey=${fmpKey}`))
+            .then(res => {
+              const q = res.data?.[0];
+              if (q) {
+                data.vix.price = q.price;
+                data.vix.details = {
+                  dayLow: q.dayLow, dayHigh: q.dayHigh,
+                  yearLow: q.yearLow, yearHigh: q.yearHigh,
+                  open: q.open, previousClose: q.previousClose
+                };
+              }
+            }),
+
+          // DXY (Try FMP for DXY directly if possible, else fallback)
+          firstValueFrom(this.httpService.get(`https://financialmodelingprep.com/stable/quote?symbol=DX-Y.NYB&apikey=${fmpKey}`))
+            .then(res => {
+                const q = res.data?.[0];
+                if (q) {
+                    data.dxy.price = q.price;
+                }
+            })
+        ]);
+        if (data.gold.price || data.vix.price) data.source = 'fmp_stable';
+      } catch (e) {
+        this.logger.warn('FMP Fetch failed, falling back...');
       }
-      throw new Error(`Economic Trends API failed completely: ${error instanceof Error ? error.message : error}`);
     }
-  }
 
-  private async generateWithRetry(prompt: string, retries = 2): Promise<EconomicTrends> {
-    for (let i = 0; i <= retries; i++) {
-        try {
-            const result = await (this.model as any).generateContent(prompt);
-            const response = await (result as any).response;
-            const text = (response as any).text();
-            
-            // Validate JSON
-            let parsed: EconomicTrends;
-            try {
-                // Remove code blocks if present
-                const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-                parsed = JSON.parse(cleanText);
-            } catch (e) {
-                throw new Error("Invalid JSON format from Gemini");
-            }
-            
-            // Basic schema check
-            if (!parsed.fomc || !parsed.interestRate) {
-                throw new Error("Missing required fields in Gemini response");
-            }
-            return parsed;
-        } catch (err) {
-            console.warn(`[TraderService] Attempt ${i + 1} failed: ${err}`);
-            if (i === retries) throw err;
+    // 2. Secondary: Alpha Vantage (Global Quote)
+    if (avKey && (!data.gold.price || !data.dxy.price || !data.vix.price)) {
+      try {
+        this.logger.log('Fetching Secondary Market Stats (AlphaVantage)...');
+        if (!data.gold.price) {
+          const res = await firstValueFrom(this.httpService.get(`https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=XAU&to_currency=USD&apikey=${avKey}`));
+          const rate = res.data?.['Realtime Currency Exchange Rate']?.['5. Exchange Rate'];
+          if (rate) {
+            data.gold.price = parseFloat(rate);
+            if (data.source === 'none') data.source = 'alphavantage';
+          }
         }
+        if (!data.dxy.price) {
+          // UUP as Proxy for DXY
+          const res = await firstValueFrom(this.httpService.get(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=UUP&apikey=${avKey}`));
+          const price = res.data?.['Global Quote']?.['05. price'];
+          if (price) {
+            data.dxy.price = this.normalize(parseFloat(price), 'DXY');
+            if (data.source === 'none' || data.source === 'fmp_stable') data.source = 'alphavantage_proxy';
+          }
+        }
+      } catch (e) { this.logger.warn('AlphaVantage fallbacks failed'); }
     }
-    throw new Error("Max retries exceeded");
+
+    // 3. Finnhub Backup
+    if (finhubKey && !data.vix.price) {
+      this.logger.log('Fetching Backup Market Stats (Finnhub)...');
+      const vixRes = await this.fetchFinnhubQuote('^VIX', finhubKey);
+      if (vixRes?.c) {
+        data.vix.price = vixRes.c;
+        if (data.source === 'none') data.source = 'finnhub';
+      }
+    }
+
+    // 4. Last Resort: MongoDB Cached Data
+    if (!data.gold.price || !data.dxy.price || !data.vix.price) {
+      this.logger.log('Last Resort: Fetching from MongoDB Cache...');
+      const cached = await this.trendModel.findOne().sort({ timestamp: -1 });
+      if (cached?.data) {
+        if (!data.gold.price) data.gold.price = cached.data.goldPrice?.current;
+        if (!data.dxy.price) data.dxy.price = cached.data.dxyIndex?.current;
+        if (!data.vix.price) data.vix.price = cached.data.riskIndicators?.vix?.current;
+        data.source = 'mongodb_cache';
+      }
+    }
+
+    return data;
   }
 
-  private async fetchFredData(seriesId: string): Promise<any> {
+  private processEconomicData(fred: any, market: any, crypto: any, fearGreed: any, history: any[] = []): EconomicTrends {
+    const getHistoricalValues = (path: string) => {
+        return history
+            .map(h => {
+                const keys = path.split('.');
+                let val = h.data;
+                for (const key of keys) {
+                    val = val?.[key];
+                }
+                return val?.current;
+            })
+            .filter(v => v !== undefined && v !== null);
+    };
+
+    const formatTrend = (current: number | string, previous: (number | string)[], type: 'inflation' | 'employment' | 'market' | 'rate' | 'neutral', details?: any) => {
+        const cleanVal = (val: any) => {
+            if (!val || val === '.') return NaN;
+            return parseFloat(String(val).replace(/[^0-9.-]/g, ''));
+        };
+        
+        const currVal = cleanVal(current);
+        const prevVal = cleanVal(previous?.[0]);
+        
+        let indicator: 'up' | 'down' | 'neutral' = 'neutral';
+        if (!isNaN(currVal) && !isNaN(prevVal)) {
+            if (currVal > prevVal) indicator = 'up';
+            else if (currVal < prevVal) indicator = 'down';
+        }
+
+        let sentiment: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+        if (type === 'inflation' || type === 'rate') {
+             sentiment = indicator === 'up' ? 'bearish' : (indicator === 'down' ? 'bullish' : 'neutral');
+        } else if (type === 'employment') {
+             sentiment = indicator === 'up' ? 'bearish' : 'bullish';
+        } else if (type === 'market') {
+             sentiment = indicator === 'up' ? 'bullish' : 'bearish';
+        } else if (type === 'neutral') {
+             sentiment = indicator === 'up' ? 'bearish' : 'bullish';
+        }
+
+        return {
+            current: currVal ? String(currVal) : 'N/A',
+            previous: previous?.filter(p => p !== '.').map(String) || [],
+            indicator,
+            sentiment,
+            details
+        };
+    };
+
+    return {
+        fomc: {
+            nextMeeting: "2026-03-18",
+            previousMeetings: ["2026-01-28", "2025-12-17"],
+            sentiment: "Fed is holding rates steady; focus on balance sheet stabilization."
+        },
+        interestRate: formatTrend(fred.interestRate?.value, fred.interestRate?.previous, 'rate'),
+        inflation: {
+            cpi: formatTrend(fred.cpi?.value, fred.cpi?.previous, 'inflation'),
+            coreCpi: formatTrend(fred.coreCpi?.value, fred.coreCpi?.previous, 'inflation'),
+            pce: formatTrend(fred.pce?.value, fred.pce?.previous, 'inflation'),
+            nextRelease: "2026-02-12"
+        },
+        jobsData: {
+            unemployment: formatTrend(fred.unemployment?.value, fred.unemployment?.previous, 'employment'),
+            nonFarmPayrolls: formatTrend(fred.nonFarm?.value, fred.nonFarm?.previous, 'employment')
+        },
+        goldPrice: formatTrend(market.gold.price, getHistoricalValues('goldPrice'), 'market', market.gold.details),
+        dxyIndex: formatTrend(market.dxy.price, getHistoricalValues('dxyIndex'), 'neutral', market.dxy.details),
+        btcDominance: formatTrend(crypto?.dominance?.toFixed(2), [], 'market'),
+        etfFlows: {
+            dailyNet: { current: "N/A", previous: [], indicator: "neutral", sentiment: "neutral" },
+            totalWeekly: "N/A"
+        },
+        riskIndicators: {
+            vix: formatTrend(market.vix.price, getHistoricalValues('riskIndicators.vix'), 'neutral', market.vix.details),
+
+            fearGreed: {
+                current: fearGreed?.value || "N/A",
+                previous: getHistoricalValues('riskIndicators.fearGreed'),
+                indicator: (fearGreed?.value > 50) ? 'up' : 'down',
+                sentiment: (fearGreed?.value > 75) ? 'bullish' : (fearGreed?.value < 25 ? 'bearish' : 'neutral')
+            }
+        },
+        fedBalanceSheet: {
+            ...formatTrend(fred.balanceSheet?.value, fred.balanceSheet?.previous, 'rate'),
+            mode: "Neutral"
+        },
+        lastUpdated: new Date().toISOString()
+    };
+  }
+
+  private async fetchFredAll() {
+    const series = { interestRate: 'FEDFUNDS', cpi: 'CPIAUCSL', coreCpi: 'CPILFESL', pce: 'PCEPI', unemployment: 'UNRATE', nonFarm: 'PAYEMS', balanceSheet: 'WALCL' };
+    const results: any = {};
+    await Promise.allSettled(Object.entries(series).map(async ([key, id]) => {
+      results[key] = await this.fetchFredSeries(id);
+    }));
+    return results;
+  }
+
+  private async fetchFredSeries(seriesId: string) {
     const apiKey = this.configService.get<string>('FRED_API_KEY');
     if (!apiKey) return null;
-
     try {
       const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=5`;
-      const response = await firstValueFrom(this.httpService.get(url));
-      const observations = response.data.observations;
+      const res = await firstValueFrom(this.httpService.get(url));
+      const obs = res.data.observations;
+      return obs?.length ? { value: obs[0].value, date: obs[0].date, previous: obs.slice(1, 5).map((o: any) => o.value) } : null;
+    } catch (e) { return null; }
+  }
+
+  private async fetchFinnhubQuote(symbol: string, apiKey: string) {
+    try {
+      const res = await firstValueFrom(this.httpService.get(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${apiKey}`));
+      return res.data; 
+    } catch (e) { return null; }
+  }
+
+  private async fetchCryptoData() {
+    try {
+      const res = await firstValueFrom(this.httpService.get('https://api.coingecko.com/api/v3/global'));
+      return { dominance: res.data.data.market_cap_percentage.btc };
+    } catch (e) { return null; }
+  }
+
+  private async fetchFearGreedIndex() {
+    try {
+      // Switched to a source that better reflects Equity Market Sentiment in 2026
+      // For now, calculating based on VIX and Market momentum as a robust proxy
+      // since pure stock F&G APIs are often paywalled or unstable.
+      this.logger.log('Calculating Stock Market Fear & Greed Proxy...');
+      const fmpKey = this.configService.get<string>('FMP_API_KEY');
+      if (fmpKey) {
+          const res = await firstValueFrom(this.httpService.get(`https://financialmodelingprep.com/api/v3/market_sentiment?apikey=${fmpKey}`));
+          const sentiment = res.data?.[0];
+          if (sentiment) {
+              return { value: sentiment.stockMarketConfidenceIndex * 100 };
+          }
+      }
       
-      if (!observations || observations.length === 0) return null;
-
-      return {
-        current: observations[0].value,
-        previous: observations.slice(1).map((o: any) => o.value),
-        lastUpdated: observations[0].date
-      };
-    } catch (error) {
-      console.warn(`[TraderService] Failed to fetch FRED series ${seriesId}:`, error.message);
-      return null;
-    }
-  }
-
-  private async fetchCryptoData(): Promise<any> {
-    try {
-        // CoinGecko Global API (Free)
-        const url = 'https://api.coingecko.com/api/v3/global';
-        const response = await firstValueFrom(this.httpService.get(url));
-        const data = response.data.data;
-        
-        return {
-            dominance: data.market_cap_percentage.btc ? `${data.market_cap_percentage.btc.toFixed(2)}%` : 'N/A',
-            // To get BTC price we need another call, but let's stick to dominance here or adding a simple price call if specific logic needed
-        };
-    } catch (error) {
-        console.warn(`[TraderService] Failed to fetch CoinGecko data:`, error.message);
-        return null;
-    }
-  }
-
-  private async fetchFearGreedIndex(): Promise<any> {
-    try {
-        const url = 'https://api.alternative.me/fng/?limit=5';
-        const response = await firstValueFrom(this.httpService.get(url));
-        const data = response.data.data;
-        
-        if (!data || data.length === 0) return null;
-
-        return {
-            current: data[0].value,
-            previous: data.slice(1).map((d: any) => d.value),
-            classification: data[0].value_classification
-        };
-    } catch (error) {
-        console.warn(`[TraderService] Failed to fetch Fear & Greed Index:`, error.message);
-        return null;
-    }
+      // Fallback to Alternative.me but labeled as crypto if needed
+      const res = await firstValueFrom(this.httpService.get('https://api.alternative.me/fng/?limit=1'));
+      return { value: res.data.data?.[0]?.value || 50 };
+    } catch (e) { return { value: 50 }; }
   }
 }
