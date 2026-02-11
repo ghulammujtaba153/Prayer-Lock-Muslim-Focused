@@ -12,5 +12,6 @@ import { Trend, TrendSchema } from './schemas/trends.schema';
   ],
   controllers: [TraderController],
   providers: [TraderService],
+  exports: [TraderService],
 })
 export class TraderModule {}

@@ -6,6 +6,7 @@ import { DatabaseModule } from './database/database.module';
 import { QuranModule } from './quran/quran.module';
 import { TraderModule } from './trader/trader.module';
 import { PerplexityModule } from './perplexity/perplexity.module';
+import { NarrativeModule } from './narrative/narrative.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { PerplexityModule } from './perplexity/perplexity.module';
     QuranModule,
     TraderModule,
     PerplexityModule,
+    NarrativeModule,
   ],
 })
 export class AppModule {}

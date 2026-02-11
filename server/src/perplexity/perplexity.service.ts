@@ -278,4 +278,30 @@ Rules:
       return { response: latest.response };
     }
   }
+
+  async generateGenericResponse(prompt: string): Promise<string> {
+    const apiKey = this.configService.get<string>('PERPLEXITY_API_KEY');
+    if (!apiKey) {
+      throw new Error('PERPLEXITY_API_KEY not configured');
+    }
+
+    try {
+      const res = await firstValueFrom(
+        this.httpService.post(
+          'https://api.perplexity.ai/chat/completions',
+          {
+            model: 'sonar-pro',
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.2, // Slightly higher for more "narrative" feel
+          },
+          { headers: { Authorization: `Bearer ${apiKey}` } },
+        ),
+      );
+
+      return res.data?.choices?.[0]?.message?.content ?? 'Unable to generate narrative at this time.';
+    } catch (error) {
+      this.logger.error('Perplexity generic response failed', (error as Error).message);
+      throw error;
+    }
+  }
 }

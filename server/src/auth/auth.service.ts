@@ -18,8 +18,17 @@ export class AuthService {
   ) {}
 
   // 🔐 REGISTER
-  async register(name: string, email: string, password: string) {
-    const existingUser = await this.userModel.findOne({ email });
+  async register(
+    name: string,
+    email: string,
+    password: string,
+    country?: string,
+    marketType?: string,
+  ) {
+    const normalizedEmail = email.toLowerCase();
+    const existingUser = await this.userModel.findOne({
+      email: normalizedEmail,
+    });
     if (existingUser) {
       throw new BadRequestException('User already exists');
     }
@@ -28,8 +37,10 @@ export class AuthService {
 
     const user = await this.userModel.create({
       name,
-      email,
+      email: normalizedEmail,
       passwordHash,
+      country,
+      marketType,
       streak: 0,
     });
 
@@ -41,7 +52,8 @@ export class AuthService {
 
   // 🔐 LOGIN
   async login(email: string, password: string) {
-    const user = await this.userModel.findOne({ email });
+    const normalizedEmail = email.toLowerCase();
+    const user = await this.userModel.findOne({ email: normalizedEmail });
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -65,6 +77,9 @@ export class AuthService {
         id: user._id,
         email: user.email,
         streak: user.streak,
+        country: user.country,
+        marketType: user.marketType,
+        sentiment: user.sentiment,
       },
     };
   }
@@ -82,6 +97,25 @@ export class AuthService {
       id: user._id,
       email: user.email,
       streak: user.streak,
+      country: user.country,
+      marketType: user.marketType,
+      sentiment: user.sentiment,
+    };
+  }
+
+  // 🔐 UPDATE PROFILE
+  async updateProfile(userId: string, updateData: any) {
+    const user = await this.userModel.findByIdAndUpdate(userId, updateData, { new: true });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    return {
+      id: user._id,
+      email: user.email,
+      streak: user.streak,
+      country: user.country,
+      marketType: user.marketType,
+      sentiment: user.sentiment,
     };
   }
   

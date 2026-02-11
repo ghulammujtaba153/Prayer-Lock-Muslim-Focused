@@ -12,5 +12,6 @@ import { Perplexity, PerplexitySchema } from './schemas/perplexity.schema';
   ],
   controllers: [PerplexityController],
   providers: [PerplexityService],
+  exports: [PerplexityService],
 })
 export class PerplexityModule {}

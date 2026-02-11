@@ -9,13 +9,17 @@ interface User {
   name: string;
   email: string;
   streak: number;
+  country?: string;
+  marketType?: string;
+  sentiment?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, country?: string, marketType?: string) => Promise<void>;
+  updateProfile: (data: Partial<User>) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
   loading: boolean;
@@ -37,7 +41,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Set token for axios instance before fetching user
           axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
           const response = await axiosInstance.post('/auth/get-user', { token: savedToken });
-          const { user: userData } = response.data;
+          // Backend returns { id, email, streak, country, marketType, sentiment } directly or inside a user object
+          // Looking at auth.service.ts getUser returns the object directly
+          const userData = response.data;
           setUser(userData);
         } catch (error) {
           console.error('Failed to restore session:', error);
@@ -52,7 +58,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    setLoading(true);
     try {
       const response = await axiosInstance.post('/auth/login', { email, password });
       const { accessToken, user: userData } = response.data;
@@ -61,13 +66,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(userData);
       localStorage.setItem('token', accessToken);
       axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      throw error;
     }
   };
 
-  const register = async (name: string, email: string, password: string) => {
-    await axiosInstance.post('/auth/register', { name, email, password });
+  const register = async (name: string, email: string, password: string, country?: string, marketType?: string) => {
+    await axiosInstance.post('/auth/register', { name, email, password, country, marketType });
+  };
+
+  const updateProfile = async (data: Partial<User>) => {
+    try {
+      const response = await axiosInstance.patch('/auth/profile', data);
+      setUser(response.data);
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      throw error;
+    }
   };
 
   const logout = () => {
@@ -84,6 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         token,
         login,
         register,
+        updateProfile,
         logout,
         isAuthenticated: !!token,
         loading,
@@ -96,11 +112,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               <div className="absolute inset-0 border-4 border-accent/20 rounded-full"></div>
               <div className="absolute inset-0 border-4 border-accent rounded-full border-t-transparent animate-spin"></div>
               <div className="absolute inset-4 bg-accent/10 rounded-full flex items-center justify-center">
-                <span className="text-2xl animate-pulse">🌙</span>
+                <span className="text-2xl animate-pulse">⚡</span>
               </div>
             </div>
             <div className="space-y-2 text-center">
-              <h2 className="text-xl font-bold text-slate-800 dark:text-white tracking-tight">QuranicAI</h2>
+              <h2 className="text-xl font-bold text-slate-800 dark:text-white tracking-tight">TradeAI</h2>
               <p className="text-sm text-slate-500 animate-pulse font-medium">Securing your session...</p>
             </div>
           </div>

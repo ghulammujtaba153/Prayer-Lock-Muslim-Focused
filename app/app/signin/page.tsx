@@ -78,7 +78,7 @@ export default function SigninPage() {
             Welcome Back
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Continue your spiritual journey
+            Access your market intelligence
           </p>
         </div>
 

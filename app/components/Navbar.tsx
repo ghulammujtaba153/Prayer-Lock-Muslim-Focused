@@ -3,6 +3,7 @@
 import React, { useEffect } from "react";
 import { useAuth } from "@/context/authContext";
 import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
 
 export default function Navbar() {
   const { user, logout, isAuthenticated, loading } = useAuth();
@@ -24,10 +25,12 @@ export default function Navbar() {
       <div className="container mx-auto px-4 py-4">
         <div className="glass-card flex items-center justify-between px-6 py-3 rounded-2xl shadow-lg border border-white/20 dark:border-white/10">
           <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold text-slate-800 dark:text-white">QuranicAI</span>
+            <span className="text-2xl font-bold text-slate-800 dark:text-white">TradeAI</span>
           </div>
           
           <div className="flex items-center gap-4">
+            <Link href="/">Home</Link>
+            <Link href="/trader">Trader</Link>
             {user && (
               <div className="hidden md:flex flex-col items-end mr-2">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">User</span>
