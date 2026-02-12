@@ -184,16 +184,19 @@ export class PerplexityService {
     };
   }
 
+
+  const date = new Date().toISOString().split('T')[0];
+
   const prompt = `
 You are a macro market intelligence API. Your goal is to provide detailed, explanatory insights for each of the following 10 items.
-For each item, search for the latest data (February 2026) and explain the context, recent trends, and current status.
+For each item, search for the latest data (${date}) and explain the context, recent trends, and current status.
 Use qualitative phrases like "mid-3% range", "high-90s", "around X%", "mid-7T range", etc. if exact data is delayed.
 
 For each item, provide a detailed paragraph (2-4 sentences).
 
 Return the results strictly in this format:
 
-ITEM1: <Detailed explanation of 2026 FOMC meeting dates including the 8-meeting structure and approximate schedule.>
+ITEM1: <Detailed explanation of coming FOMC meeting dates including the 8-meeting structure and approximate schedule.>
 ITEM2: <Detailed explanation of current US Interest Rate/Fed Funds target range upper bound.>
 ITEM3: <Detailed explanation of latest US CPI Inflation YoY trends.>
 ITEM4: <Detailed explanation of US Unemployment rate and current labour market status.>

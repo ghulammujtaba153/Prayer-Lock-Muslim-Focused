@@ -7,6 +7,7 @@ import { QuranModule } from './quran/quran.module';
 import { TraderModule } from './trader/trader.module';
 import { PerplexityModule } from './perplexity/perplexity.module';
 import { NarrativeModule } from './narrative/narrative.module';
+import { GeminiModule } from './gemini/gemini.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { NarrativeModule } from './narrative/narrative.module';
     TraderModule,
     PerplexityModule,
     NarrativeModule,
+    GeminiModule,
   ],
 })
 export class AppModule {}

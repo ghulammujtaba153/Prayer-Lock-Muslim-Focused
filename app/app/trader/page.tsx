@@ -5,12 +5,13 @@ import Calculator from "@/components/trader/Calculator"
 import Education from "@/components/trader/Education"
 import Trends from "@/components/trader/Trends"
 import OptionTrading from "@/components/trader/OptionTrading"
-import { MdCalculate, MdSchool, MdTrendingUp, MdOutlineDonutLarge, MdQueryStats } from "react-icons/md"
+import GeminiSection from "@/components/trader/GeminiSection"
+import { MdCalculate, MdSchool, MdTrendingUp, MdOutlineDonutLarge, MdQueryStats, MdAnalytics } from "react-icons/md"
 import PerplexitySection from "@/components/trader/PerplexitySection"
 
 
 const TraderPage = () => {
-    const [activeTab, setActiveTab] = useState<"calculator" | "education" | "trends" | "options" | "markets">("calculator")
+    const [activeTab, setActiveTab] = useState<"calculator" | "education" | "trends" | "options" | "markets" | "analysis">("calculator")
 
     return (
         <div className="min-h-screen text-[#eaecef]">
@@ -75,6 +76,18 @@ const TraderPage = () => {
                             <MdQueryStats size={20} />
                             Markets
                         </button>
+
+                        <button
+                            onClick={() => setActiveTab("analysis")}
+                            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all whitespace-nowrap ${
+                                activeTab === "analysis"
+                                    ? "bg-[#2b3139] text-yellow-500 shadow-lg scale-105"
+                                    : "text-[#848e9c] hover:text-white"
+                            }`}
+                        >
+                            <MdAnalytics size={20} />
+                            Analysis
+                        </button>
                     </div>
                 </div>
 
@@ -85,6 +98,7 @@ const TraderPage = () => {
                     {activeTab === "education" && <Education />}
                     {activeTab === "trends" && <Trends />}
                     {activeTab === "markets" && <PerplexitySection />}
+                    {activeTab === "analysis" && <GeminiSection />}
                 </div>
             </div>
         </div>

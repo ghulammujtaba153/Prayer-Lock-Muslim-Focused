@@ -259,7 +259,7 @@ export class TraderService {
         dxyIndex: formatTrend(market.dxy.price, getHistoricalValues('dxyIndex'), 'neutral', market.dxy.details),
         btcDominance: formatTrend(crypto?.dominance?.toFixed(2), [], 'market'),
         etfFlows: {
-            dailyNet: { current: "N/A", previous: [], indicator: "neutral", sentiment: "neutral" },
+            dailyNet: formatTrend(fred.etfFlows?.value, fred.etfFlows?.previous, 'market'),
             totalWeekly: "N/A"
         },
         riskIndicators: {
@@ -281,19 +281,28 @@ export class TraderService {
   }
 
   private async fetchFredAll() {
-    const series = { interestRate: 'FEDFUNDS', cpi: 'CPIAUCSL', coreCpi: 'CPILFESL', pce: 'PCEPI', unemployment: 'UNRATE', nonFarm: 'PAYEMS', balanceSheet: 'WALCL' };
+    const series = [
+      { key: 'interestRate', id: 'FEDFUNDS' },
+      { key: 'cpi', id: 'CPIAUCSL', units: 'pc1' },
+      { key: 'coreCpi', id: 'CORESTICKM159SFRBATL' },
+      { key: 'pce', id: 'PCEPI', units: 'pc1' },
+      { key: 'unemployment', id: 'UNRATE' },
+      { key: 'nonFarm', id: 'PAYEMS' },
+      { key: 'balanceSheet', id: 'WALCL' },
+      { key: 'etfFlows', id: 'EXHE2C5Q21BNP' }
+    ];
     const results: any = {};
-    await Promise.allSettled(Object.entries(series).map(async ([key, id]) => {
-      results[key] = await this.fetchFredSeries(id);
+    await Promise.allSettled(series.map(async ({ key, id, units }) => {
+      results[key] = await this.fetchFredSeries(id, units);
     }));
     return results;
   }
 
-  private async fetchFredSeries(seriesId: string) {
+  private async fetchFredSeries(seriesId: string, units: string = 'lin') {
     const apiKey = this.configService.get<string>('FRED_API_KEY');
     if (!apiKey) return null;
     try {
-      const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=5`;
+      const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=5&units=${units}`;
       const res = await firstValueFrom(this.httpService.get(url));
       const obs = res.data.observations;
       return obs?.length ? { value: obs[0].value, date: obs[0].date, previous: obs.slice(1, 5).map((o: any) => o.value) } : null;
