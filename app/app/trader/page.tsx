@@ -14,7 +14,7 @@ import NewsSection from "@/components/trader/NewsSection"
 
 
 const TraderPage = () => {
-    const [activeTab, setActiveTab] = useState<"calculator" | "education" | "trends" | "options" | "markets" | "analysis">("calculator")
+    const [activeTab, setActiveTab] = useState<"calculator" | "education" | "trends" | "options" | "markets" | "analysis" | "finhub" | "calender" | "news">("calculator")
 
     return (
         <div className="min-h-screen text-[#eaecef]">
