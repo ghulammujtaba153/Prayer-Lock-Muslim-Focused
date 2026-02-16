@@ -8,6 +8,9 @@ import OptionTrading from "@/components/trader/OptionTrading"
 import GeminiSection from "@/components/trader/GeminiSection"
 import { MdCalculate, MdSchool, MdTrendingUp, MdOutlineDonutLarge, MdQueryStats, MdAnalytics } from "react-icons/md"
 import PerplexitySection from "@/components/trader/PerplexitySection"
+import FinhubSection from "@/components/trader/FinhubSection"
+import CalenderSection from "@/components/trader/CalenderSection"
+import NewsSection from "@/components/trader/NewsSection"
 
 
 const TraderPage = () => {
@@ -77,7 +80,7 @@ const TraderPage = () => {
                             Markets
                         </button>
 
-                        <button
+                        {/* <button
                             onClick={() => setActiveTab("analysis")}
                             className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all whitespace-nowrap ${
                                 activeTab === "analysis"
@@ -87,7 +90,45 @@ const TraderPage = () => {
                         >
                             <MdAnalytics size={20} />
                             Analysis
+                        </button> */}
+
+                        <button
+                            onClick={() => setActiveTab("finhub")}
+                            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all whitespace-nowrap ${
+                                activeTab === "finhub"
+                                    ? "bg-[#2b3139] text-yellow-500 shadow-lg scale-105"
+                                    : "text-[#848e9c] hover:text-white"
+                            }`}
+                        >
+                            <MdAnalytics size={20} />
+                            Finhub
                         </button>
+
+                        <button
+                            onClick={() => setActiveTab("calender")}
+                            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all whitespace-nowrap ${
+                                activeTab === "calender"
+                                    ? "bg-[#2b3139] text-yellow-500 shadow-lg scale-105"
+                                    : "text-[#848e9c] hover:text-white"
+                            }`}
+                        >
+                            <MdAnalytics size={20} />
+                            Calender
+                        </button>
+
+
+                        <button
+                            onClick={() => setActiveTab("news")}
+                            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all whitespace-nowrap ${
+                                activeTab === "news"
+                                    ? "bg-[#2b3139] text-yellow-500 shadow-lg scale-105"
+                                    : "text-[#848e9c] hover:text-white"
+                            }`}
+                        >
+                            <MdAnalytics size={20} />
+                            News
+                        </button>
+                        
                     </div>
                 </div>
 
@@ -98,7 +139,10 @@ const TraderPage = () => {
                     {activeTab === "education" && <Education />}
                     {activeTab === "trends" && <Trends />}
                     {activeTab === "markets" && <PerplexitySection />}
-                    {activeTab === "analysis" && <GeminiSection />}
+                    {/* {activeTab === "analysis" && <GeminiSection />} */}
+                    {activeTab === "finhub" && <FinhubSection />}
+                    {activeTab === "calender" && <CalenderSection />}
+                    {activeTab === "news" && <NewsSection />}
                 </div>
             </div>
         </div>
