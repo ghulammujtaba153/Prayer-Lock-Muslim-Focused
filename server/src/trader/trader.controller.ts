@@ -10,4 +10,9 @@ export class TraderController {
   async getTrends(): Promise<EconomicTrends> {
     return this.traderService.getEconomicTrends();
   }
+
+  @Get('market-quotes')
+  async getMarketQuotes() {
+    return this.traderService.getMarketQuotes();
+  }
 }

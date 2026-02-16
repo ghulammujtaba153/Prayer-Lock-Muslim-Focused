@@ -4,10 +4,14 @@ import { HttpModule } from '@nestjs/axios';
 import { TraderController } from './trader.controller';
 import { TraderService } from './trader.service';
 import { Trend, TrendSchema } from './schemas/trends.schema';
+import { FinhubQuote, FinhubQuoteSchema } from './schemas/finhub.Schema';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Trend.name, schema: TrendSchema }]),
+    MongooseModule.forFeature([
+      { name: Trend.name, schema: TrendSchema },
+      { name: FinhubQuote.name, schema: FinhubQuoteSchema },
+    ]),
     HttpModule,
   ],
   controllers: [TraderController],

@@ -6,6 +6,7 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { EconomicTrends } from './interfaces/trends.interface';
 import { Trend } from './schemas/trends.schema';
+import { FinhubQuote } from './schemas/finhub.Schema';
 
 const MARKET_ASSETS = {
   GOLD: { proxy: 'GCUSD', multiplier: 1.0, type: 'commodity' }, // FMP GCUSD is direct
@@ -20,6 +21,7 @@ export class TraderService {
   constructor(
     private configService: ConfigService,
     @InjectModel(Trend.name) private trendModel: Model<Trend>,
+    @InjectModel(FinhubQuote.name) private finhubQuoteModel: Model<FinhubQuote>,
     private httpService: HttpService,
   ) {}
 
@@ -342,5 +344,207 @@ export class TraderService {
       const res = await firstValueFrom(this.httpService.get('https://api.alternative.me/fng/?limit=1'));
       return { value: res.data.data?.[0]?.value || 50 };
     } catch (e) { return { value: 50 }; }
+  }
+
+  async getMarketQuotes() {
+    const CACHE_TTL_HOURS = 1; // Cache for 1 hour matching frontend polling
+    const now = new Date();
+
+    try {
+      // 1. Check if we have fresh cached data for all symbols
+      const cachedQuotes = await this.finhubQuoteModel.find({}).exec();
+      
+      if (cachedQuotes.length > 0) {
+        // Check if all caches are fresh (within 1 hour)
+        const allFresh = cachedQuotes.every((quote) => {
+          const quoteAge = (now.getTime() - new Date(quote.timestamp).getTime()) / (1000 * 60 * 60);
+          return quoteAge < CACHE_TTL_HOURS;
+        });
+
+        if (allFresh && cachedQuotes.length >= 7) { // We expect 7 assets
+          this.logger.log('Returning cached market quotes from MongoDB');
+          const quotes = {};
+          cachedQuotes.forEach((quote) => {
+            const symbolName = this.getSymbolName(quote.symbol);
+            quotes[symbolName] = {
+              symbol: quote.symbol,
+              price: quote.price,
+              change: quote.change,
+              percentChange: quote.percentChange,
+              high: quote.high,
+              low: quote.low,
+              open: quote.open,
+              previousClose: quote.previousClose,
+            };
+          });
+          return quotes;
+        }
+      }
+
+      this.logger.log('Cache is stale or incomplete, fetching from external APIs...');
+
+      // 2. Fetch fresh data from external APIs
+      const finhubKey = this.configService.get<string>('FINHUB_API_KEY');
+      const commodityKey = this.configService.get<string>('COMMODITY_API_KEY');
+      const twelveDataKey = this.configService.get<string>('TWELVE_DATA_API_KEY');
+
+      if (!finhubKey) throw new Error('Finnhub API key not configured');
+      if (!commodityKey) throw new Error('Commodity API key not configured');
+      if (!twelveDataKey) throw new Error('Twelve Data API key not configured');
+
+      const quotes = {};
+
+      // Fetch BTC from Finnhub
+      try {
+        const btcData = await this.fetchFinnhubQuote('BINANCE:BTCUSDT', finhubKey);
+        if (btcData) {
+          quotes['BTC'] = {
+            symbol: 'BINANCE:BTCUSDT',
+            price: btcData.c,
+            change: btcData.d,
+            percentChange: btcData.dp,
+            high: btcData.h,
+            low: btcData.l,
+            open: btcData.o,
+            previousClose: btcData.pc,
+          };
+        }
+      } catch (error) {
+        this.logger.error('Finnhub BTC fetch failed:', error.message);
+      }
+
+      // Fetch indices from Twelve Data API
+      const twelveDataSymbols = {
+        NASDAQ: 'QQQ',
+        DOW_JONES: 'DIA',
+        SP500: 'SPY',
+      };
+
+      await Promise.all(
+        Object.entries(twelveDataSymbols).map(async ([name, symbol]) => {
+          try {
+            const data = await this.fetchTwelveDataQuote(symbol, twelveDataKey);
+            if (data) {
+              quotes[name] = {
+                symbol,
+                price: parseFloat(data.close),
+                change: parseFloat(data.change),
+                percentChange: parseFloat(data.percent_change),
+                high: parseFloat(data.high),
+                low: parseFloat(data.low),
+                open: parseFloat(data.open),
+                previousClose: parseFloat(data.previous_close),
+              };
+            }
+          } catch (error) {
+            this.logger.error(`Twelve Data ${name} fetch failed:`, error.message);
+          }
+        }),
+      );
+
+      // Fetch commodities from Commodity Price API
+      const commoditySymbols = {
+        GOLD: 'XAU',
+        SILVER: 'XAG',
+        CRUDE_OIL: 'WTIOIL-FUT',
+      };
+
+      try {
+        const commodityData = await this.fetchCommodityPrices(
+          Object.values(commoditySymbols).join(','),
+          commodityKey,
+        );
+
+        if (commodityData?.rates) {
+          Object.entries(commoditySymbols).forEach(([name, symbol]) => {
+            const price = commodityData.rates[symbol];
+            if (price) {
+              quotes[name] = {
+                symbol,
+                price: parseFloat(price.toFixed(2)),
+                change: null,
+                percentChange: null,
+                high: null,
+                low: null,
+                open: null,
+                previousClose: null,
+              };
+            }
+          });
+        }
+      } catch (error) {
+        this.logger.error('Commodity API fetch failed:', error.message);
+      }
+
+      // 3. Save all quotes to MongoDB (upsert)
+      await Promise.all(
+        Object.entries(quotes).map(async ([name, quoteData]: [string, any]) => {
+          try {
+            await this.finhubQuoteModel.findOneAndUpdate(
+              { symbol: quoteData.symbol },
+              {
+                symbol: quoteData.symbol,
+                price: quoteData.price,
+                change: quoteData.change || 0,
+                percentChange: quoteData.percentChange || 0,
+                high: quoteData.high || 0,
+                low: quoteData.low || 0,
+                open: quoteData.open || 0,
+                previousClose: quoteData.previousClose || 0,
+                timestamp: now,
+              },
+              { upsert: true, new: true },
+            );
+          } catch (error) {
+            this.logger.error(`Failed to cache ${name} quote:`, error.message);
+          }
+        }),
+      );
+
+      this.logger.log('Market quotes fetched and cached successfully');
+      return quotes;
+    } catch (error) {
+      this.logger.error('Error in getMarketQuotes:', error.message);
+      throw error;
+    }
+  }
+
+  private getSymbolName(symbol: string): string {
+    const symbolMap = {
+      'BINANCE:BTCUSDT': 'BTC',
+      'QQQ': 'NASDAQ',
+      'DIA': 'DOW_JONES',
+      'SPY': 'SP500',
+      'XAU': 'GOLD',
+      'XAG': 'SILVER',
+      'WTIOIL-FUT': 'CRUDE_OIL',
+    };
+    return symbolMap[symbol] || symbol;
+  }
+
+  private async fetchTwelveDataQuote(symbol: string, apiKey: string) {
+    try {
+      const url = `https://api.twelvedata.com/quote?symbol=${symbol}&apikey=${apiKey}`;
+      const res = await firstValueFrom(this.httpService.get(url));
+      return res.data;
+    } catch (e) {
+      this.logger.error('Twelve Data API error:', e.message);
+      return null;
+    }
+  }
+
+  private async fetchCommodityPrices(symbols: string, apiKey: string) {
+    try {
+      const url = `https://api.commoditypriceapi.com/v2/rates/latest?symbols=${symbols}`;
+      const res = await firstValueFrom(
+        this.httpService.get(url, {
+          headers: { 'x-api-key': apiKey },
+        }),
+      );
+      return res.data;
+    } catch (e) {
+      this.logger.error('Commodity API error:', e.message);
+      return null;
+    }
   }
 }
