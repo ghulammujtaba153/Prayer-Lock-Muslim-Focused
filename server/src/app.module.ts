@@ -8,6 +8,8 @@ import { TraderModule } from './trader/trader.module';
 import { PerplexityModule } from './perplexity/perplexity.module';
 import { NarrativeModule } from './narrative/narrative.module';
 import { GeminiModule } from './gemini/gemini.module';
+import { CalendarModule } from './calendar/calendar.module';
+
 
 @Module({
   imports: [
@@ -22,6 +24,7 @@ import { GeminiModule } from './gemini/gemini.module';
     PerplexityModule,
     NarrativeModule,
     GeminiModule,
+    CalendarModule,
   ],
 })
 export class AppModule {}

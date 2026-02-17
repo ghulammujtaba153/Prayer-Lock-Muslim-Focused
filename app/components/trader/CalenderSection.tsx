@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
@@ -17,74 +17,51 @@ interface CalendarEvent {
 
 export default function CalenderSection() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [showModal, setShowModal] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<string>("");
-  const [eventTitle, setEventTitle] = useState("");
-  const [eventColor, setEventColor] = useState("#3788d8");
+  const [loading, setLoading] = useState(true);
+  const API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:5000";
 
-  // Load events from localStorage on mount
+  const fetchEvents = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_BASE_URL}/calendar`);
+      const data = await response.json();
+      setEvents(data.map((e: { _id: string; title: string; start: string; backgroundColor?: string }) => ({
+        ...e,
+        id: e._id // Map MongoDB _id to FullCalendar id
+      })));
+    } catch (error) {
+      console.error("Error fetching events:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [API_BASE_URL]);
+
+  // Load events from API on mount
   useEffect(() => {
-    const storedEvents = localStorage.getItem("calendarEvents");
-    if (storedEvents) {
-      setEvents(JSON.parse(storedEvents));
-    }
-  }, []);
-
-  // Save events to localStorage whenever they change
-  useEffect(() => {
-    if (events.length > 0 || localStorage.getItem("calendarEvents")) {
-      localStorage.setItem("calendarEvents", JSON.stringify(events));
-    }
-  }, [events]);
-
-  const handleDateClick = (arg: any) => {
-    setSelectedDate(arg.dateStr);
-    setShowModal(true);
-    setEventTitle("");
-    setEventColor("#3788d8");
-  };
-
-  const handleEventClick = (clickInfo: any) => {
-    if (confirm(`Delete event '${clickInfo.event.title}'?`)) {
-      const updatedEvents = events.filter((event) => event.id !== clickInfo.event.id);
-      setEvents(updatedEvents);
-    }
-  };
-
-  const handleAddEvent = () => {
-    if (!eventTitle.trim()) {
-      alert("Please enter an event title");
-      return;
-    }
-
-    const newEvent: CalendarEvent = {
-      id: Date.now().toString(),
-      title: eventTitle,
-      start: selectedDate,
-      backgroundColor: eventColor,
-      borderColor: eventColor,
-    };
-
-    setEvents([...events, newEvent]);
-    setShowModal(false);
-    setEventTitle("");
-  };
+    fetchEvents();
+  }, [fetchEvents]);
 
   return (
-    <div className="w-full h-full p-6 bg-[#1e2329] rounded-lg">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-white mb-2">Trading Calendar</h1>
-        <p className="text-[#848e9c]">Track important trading events and deadlines</p>
+    <div className="w-full h-full p-6 bg-[#1e2329] rounded-lg shadow-xl">
+      <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">Trading Calendar</h1>
+          <p className="text-[#848e9c]">Track important market events and financial deadlines</p>
+        </div>
+        {loading && (
+          <div className="flex items-center gap-2 text-yellow-500 bg-yellow-500/10 px-4 py-2 rounded-full text-sm font-medium">
+            <div className="w-4 h-4 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+            Syncing Events...
+          </div>
+        )}
       </div>
 
-      {/* FullCalendar */}
-      <div className="bg-[#2b3139] rounded-lg p-4 calendar-container" style={{ minHeight: '700px' }}>
+      {/* FullCalendar - Read Only View */}
+      <div className="bg-[#2b3139] rounded-xl p-6 calendar-container shadow-inner" style={{ minHeight: '700px' }}>
         <FullCalendar
           plugins={[dayGridPlugin, interactionPlugin]}
           initialView="dayGridMonth"
           events={events as EventInput[]}
-          dateClick={handleDateClick}
-          eventClick={handleEventClick}
           headerToolbar={{
             left: "prev,next today",
             center: "title",
@@ -92,116 +69,99 @@ export default function CalenderSection() {
           }}
           height="650px"
           eventDisplay="block"
-          dayMaxEvents={false}
+          dayMaxEvents={3}
+          // Interaction settings
+          selectable={false}
+          editable={false}
         />
       </div>
 
-      {/* Add Event Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-[#2b3139] rounded-lg p-6 w-96 shadow-xl">
-            <h2 className="text-2xl font-bold text-white mb-4">Add Event</h2>
-            <p className="text-[#848e9c] mb-4">Date: {selectedDate}</p>
-
-            <div className="mb-4">
-              <label className="block text-white mb-2">Event Title</label>
-              <input
-                type="text"
-                value={eventTitle}
-                onChange={(e) => setEventTitle(e.target.value)}
-                className="w-full px-4 py-2 bg-[#1e2329] text-white rounded-lg border border-[#474d57] focus:outline-none focus:border-yellow-500"
-                placeholder="Enter event title"
-              />
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-white mb-2">Event Color</label>
-              <div className="flex gap-2">
-                {["#3788d8", "#f0b90b", "#ef4444", "#10b981", "#8b5cf6"].map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => setEventColor(color)}
-                    className={`w-10 h-10 rounded-full border-2 ${
-                      eventColor === color ? "border-white scale-110" : "border-transparent"
-                    } transition-all`}
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={handleAddEvent}
-                className="flex-1 bg-yellow-500 text-black font-semibold py-2 px-4 rounded-lg hover:bg-yellow-600 transition-colors"
-              >
-                Add Event
-              </button>
-              <button
-                onClick={() => setShowModal(false)}
-                className="flex-1 bg-[#474d57] text-white font-semibold py-2 px-4 rounded-lg hover:bg-[#5e6673] transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
+      {/* Legend / Info */}
+      <div className="mt-8 grid grid-cols-2 md:grid-cols-5 gap-4">
+        {[
+          { label: "High Priority", color: "#ef4444" },
+          { label: "Medium Priority", color: "#f0b90b" },
+          { label: "Low Priority", color: "#3788d8" },
+          { label: "Completed", color: "#10b981" },
+          { label: "Other", color: "#8b5cf6" },
+        ].map((item) => (
+          <div key={item.label} className="flex items-center gap-3 bg-[#1e2329] p-3 rounded-lg border border-[#474d57]/30">
+            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+            <span className="text-xs text-[#848e9c] font-medium">{item.label}</span>
           </div>
-        </div>
-      )}
+        ))}
+      </div>
 
       {/* Custom CSS for FullCalendar */}
       <style jsx global>{`
         .calendar-container .fc {
           color: #ffffff;
+          font-family: inherit;
+        }
+        .calendar-container .fc-toolbar-title {
+          font-size: 1.25rem !important;
+          font-weight: 700;
         }
         .calendar-container .fc-button {
-          background-color: #474d57;
-          border-color: #474d57;
-          color: white;
+          background-color: #1e2329 !important;
+          border-color: #474d57 !important;
+          color: #ffffff !important;
+          text-transform: capitalize;
+          font-weight: 500;
+          transition: all 0.2s;
         }
         .calendar-container .fc-button:hover {
-          background-color: #5e6673;
+          background-color: #363c45 !important;
+          border-color: #f0b90b !important;
         }
         .calendar-container .fc-button-active {
           background-color: #f0b90b !important;
           border-color: #f0b90b !important;
-          color: black !important;
+          color: #000000 !important;
         }
         .calendar-container .fc-daygrid-day {
-          background-color: #1e2329;
+          background-color: #0b0e11;
           min-height: 100px;
+          border-color: #474d57 !important;
         }
         .calendar-container .fc-daygrid-day:hover {
-          background-color: #2b3139;
-          cursor: pointer;
+          background-color: #1e2329;
         }
         .calendar-container .fc-col-header-cell {
-          background-color: #474d57;
-          color: white;
-          padding: 10px;
+          background-color: #1e2329;
+          color: #848e9c;
+          padding: 12px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          border-color: #474d57 !important;
         }
         .calendar-container .fc-event {
-          cursor: pointer;
-          padding: 4px 6px;
+          cursor: default;
+          padding: 4px 8px;
           margin: 2px 4px;
-          font-size: 13px;
-          white-space: normal;
-          overflow: visible;
-          text-overflow: clip;
+          font-size: 12px;
+          border-radius: 6px;
+          border: none;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+          transition: transform 0.2s;
         }
-        .calendar-container .fc-event-title {
-          white-space: normal;
-          overflow: visible;
+        .calendar-container .fc-event:hover {
+          transform: translateY(-1px);
         }
         .calendar-container .fc-daygrid-day-number {
           color: #848e9c;
-          padding: 8px;
-          font-size: 14px;
+          padding: 10px;
+          font-size: 13px;
+          font-weight: 500;
         }
         .calendar-container .fc-day-today {
           background-color: #2b3139 !important;
         }
-        .calendar-container .fc-daygrid-day-events {
-          margin-top: 4px;
+        .calendar-container .fc-daygrid-more-link {
+          color: #f0b90b !important;
+          font-size: 11px;
+          font-weight: 600;
+          padding: 2px 6px;
         }
       `}</style>
     </div>
