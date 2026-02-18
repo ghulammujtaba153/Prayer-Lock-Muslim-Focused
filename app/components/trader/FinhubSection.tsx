@@ -12,6 +12,8 @@ import {
   FaGem
 } from "react-icons/fa"
 import { GiGoldBar } from "react-icons/gi"
+import { axiosInstance } from "@/config/url"
+
 
 const ASSET_CONFIG: Record<string, { icon: React.ElementType; color: string; label: string }> = {
   BTC: { icon: FaBitcoin, color: "text-orange-500", label: "Bitcoin (BTC)" },
@@ -39,9 +41,11 @@ const FinhubSection = () => {
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
+  
+
   const fetchQuotes = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/trader/market-quotes")
+      const response = await axiosInstance.get("/trader/market-quotes")
       setQuotes(response.data)
       setLastUpdated(new Date())
       setLoading(false)
