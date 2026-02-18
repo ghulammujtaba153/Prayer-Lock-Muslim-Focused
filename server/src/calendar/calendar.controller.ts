@@ -41,4 +41,9 @@ export class CalendarController {
   async remove(@Param('id') id: string) {
     return this.calendarService.remove(id);
   }
+
+  @Post('bulk')
+  async createBulk(@Body() payload: { year: number, data: any }) {
+    return this.calendarService.createBulk(payload);
+  }
 }

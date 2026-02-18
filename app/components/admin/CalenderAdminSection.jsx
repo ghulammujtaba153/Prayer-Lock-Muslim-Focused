@@ -5,8 +5,9 @@ import axios from "axios"
 import FullCalendar from "@fullcalendar/react"
 import dayGridPlugin from "@fullcalendar/daygrid"
 import interactionPlugin from "@fullcalendar/interaction"
-import { IoTrashOutline, IoAddCircleOutline, IoCalendarOutline, IoPencilOutline } from "react-icons/io5"
+import { IoTrashOutline, IoAddCircleOutline, IoCalendarOutline, IoPencilOutline, IoCloudUploadOutline } from "react-icons/io5"
 import CalendarEventModal from "./CalendarEventModal"
+import BulkEventModal from "./BulkEventModal"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:5000"
 
@@ -14,6 +15,7 @@ const CalenderAdminSection = () => {
     const [events, setEvents] = useState([])
     const [loading, setLoading] = useState(true)
     const [isModalOpen, setIsModalOpen] = useState(false)
+    const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
     const [selectedEvent, setSelectedEvent] = useState(null)
 
     useEffect(() => {
@@ -45,6 +47,16 @@ const CalenderAdminSection = () => {
             closeModal()
         } catch (error) {
             console.error("Error saving event:", error)
+        }
+    }
+
+    const handleBulkUpload = async (bulkPayload) => {
+        try {
+            await axios.post(`${API_BASE_URL}/calendar/bulk`, bulkPayload)
+            fetchEvents()
+        } catch (error) {
+            console.error("Error bulk uploading events:", error)
+            throw error // Re-throw for modal error handling
         }
     }
 
@@ -101,13 +113,22 @@ const CalenderAdminSection = () => {
                     </h1>
                     <p className="text-[#848e9c] mt-1">Manage trading events and view them visually</p>
                 </div>
-                <button 
-                    onClick={openCreateModal}
-                    className="flex items-center justify-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-yellow-500/10 active:scale-95"
-                >
-                    <IoAddCircleOutline size={20} />
-                    Add Event
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3">
+                    <button 
+                        onClick={() => setIsBulkModalOpen(true)}
+                        className="flex items-center justify-center gap-2 bg-[#2b3139] hover:bg-[#363c45] text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg active:scale-95 border border-[#474d57]"
+                    >
+                        <IoCloudUploadOutline size={20} className="text-yellow-500" />
+                        Bulk Add (JSON)
+                    </button>
+                    <button 
+                        onClick={openCreateModal}
+                        className="flex items-center justify-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-yellow-500/10 active:scale-95"
+                    >
+                        <IoAddCircleOutline size={20} />
+                        Add Event
+                    </button>
+                </div>
             </header>
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
@@ -201,6 +222,12 @@ const CalenderAdminSection = () => {
                 initialData={selectedEvent}
             />
 
+            <BulkEventModal
+                isOpen={isBulkModalOpen}
+                onClose={() => setIsBulkModalOpen(false)}
+                onSuccess={handleBulkUpload}
+            />
+
             <style jsx global>{`
                 .calendar-container .fc {
                     color: #ffffff;
@@ -237,11 +264,16 @@ const CalenderAdminSection = () => {
                 }
                 .calendar-container .fc-event {
                     cursor: pointer;
-                    padding: 2px 4px;
+                    padding: 3px 6px;
                     margin: 1px 2px;
-                    font-size: 0.75rem;
-                    border: none;
+                    font-size: 11px;
                     border-radius: 4px;
+                    border: none;
+                    white-space: normal !important;
+                    line-height: 1.2;
+                    min-height: 1.8rem;
+                    display: flex;
+                    align-items: center;
                 }
                 .calendar-container .fc-daygrid-day-number {
                     color: #848e9c;

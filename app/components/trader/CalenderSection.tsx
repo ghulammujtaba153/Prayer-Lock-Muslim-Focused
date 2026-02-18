@@ -67,9 +67,9 @@ export default function CalenderSection() {
             center: "title",
             right: "dayGridMonth,dayGridWeek",
           }}
-          height="650px"
+          height="auto"
           eventDisplay="block"
-          dayMaxEvents={3}
+          dayMaxEvents={false}
           // Interaction settings
           selectable={false}
           editable={false}
@@ -137,13 +137,25 @@ export default function CalenderSection() {
         }
         .calendar-container .fc-event {
           cursor: default;
-          padding: 4px 8px;
-          margin: 2px 4px;
-          font-size: 12px;
-          border-radius: 6px;
+          padding: 3px 6px;
+          margin: 1px 2px;
+          font-size: 11px;
+          border-radius: 4px;
           border: none;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1);
           transition: transform 0.2s;
+          white-space: normal !important;
+          min-height: 2rem;
+          display: flex;
+          align-items: center;
+        }
+        .calendar-container .fc-event-title {
+          font-weight: 500;
+          line-height: 1.2;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
         .calendar-container .fc-event:hover {
           transform: translateY(-1px);
