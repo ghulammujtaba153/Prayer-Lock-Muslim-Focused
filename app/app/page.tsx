@@ -1,9 +1,8 @@
 'use client';
 
-'use client';
 
 import { useAuth } from "@/context/authContext";
-import NarrativeSection from "@/components/trader/NarrativeSection";
+import NarrationSection from "@/components/trader/NarrationSection";
 
 export default function Home() {
   const { user, isAuthenticated } = useAuth();
@@ -35,7 +34,7 @@ export default function Home() {
 
       {/* Market Narrative Section */}
       <div className="w-full max-w-4xl">
-        <NarrativeSection />
+        <NarrationSection />
       </div>
 
     </main>

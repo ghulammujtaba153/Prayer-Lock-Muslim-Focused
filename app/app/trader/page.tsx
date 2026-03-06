@@ -5,9 +5,7 @@ import Calculator from "@/components/trader/Calculator"
 import Education from "@/components/trader/Education"
 import Trends from "@/components/trader/Trends"
 import OptionTrading from "@/components/trader/OptionTrading"
-import GeminiSection from "@/components/trader/GeminiSection"
 import { MdCalculate, MdSchool, MdTrendingUp, MdOutlineDonutLarge, MdQueryStats, MdAnalytics } from "react-icons/md"
-import PerplexitySection from "@/components/trader/PerplexitySection"
 import FinhubSection from "@/components/trader/FinhubSection"
 import CalenderSection from "@/components/trader/CalenderSection"
 import NewsSection from "@/components/trader/NewsSection"
@@ -68,29 +66,7 @@ const TraderPage = () => {
                             Trends
                         </button>
 
-                        <button
-                            onClick={() => setActiveTab("markets")}
-                            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all whitespace-nowrap ${
-                                activeTab === "markets"
-                                    ? "bg-[#2b3139] text-yellow-500 shadow-lg scale-105"
-                                    : "text-[#848e9c] hover:text-white"
-                            }`}
-                        >
-                            <MdQueryStats size={20} />
-                            Markets
-                        </button>
-
-                        {/* <button
-                            onClick={() => setActiveTab("analysis")}
-                            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all whitespace-nowrap ${
-                                activeTab === "analysis"
-                                    ? "bg-[#2b3139] text-yellow-500 shadow-lg scale-105"
-                                    : "text-[#848e9c] hover:text-white"
-                            }`}
-                        >
-                            <MdAnalytics size={20} />
-                            Analysis
-                        </button> */}
+                        
 
                         <button
                             onClick={() => setActiveTab("finhub")}
@@ -138,8 +114,7 @@ const TraderPage = () => {
                     {activeTab === "options" && <OptionTrading />}
                     {activeTab === "education" && <Education />}
                     {activeTab === "trends" && <Trends />}
-                    {activeTab === "markets" && <PerplexitySection />}
-                    {/* {activeTab === "analysis" && <GeminiSection />} */}
+                    
                     {activeTab === "finhub" && <FinhubSection />}
                     {activeTab === "calender" && <CalenderSection />}
                     {activeTab === "news" && <NewsSection />}
