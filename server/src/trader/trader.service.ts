@@ -442,39 +442,34 @@ export class TraderService {
         }),
       );
 
-      // Fetch commodities from Commodity Price API
+      // Fetch commodities from Finnhub via ETF proxies (Free tier supported)
       const commoditySymbols = {
-        GOLD: 'XAU',
-        SILVER: 'XAG',
-        CRUDE_OIL: 'WTIOIL-FUT',
+        GOLD: 'GLD',
+        SILVER: 'SLV',
+        CRUDE_OIL: 'USO',
       };
 
-      try {
-        const commodityData = await this.fetchCommodityPrices(
-          Object.values(commoditySymbols).join(','),
-          commodityKey,
-        );
-
-        if (commodityData?.rates) {
-          Object.entries(commoditySymbols).forEach(([name, symbol]) => {
-            const price = commodityData.rates[symbol];
-            if (price) {
+      await Promise.all(
+        Object.entries(commoditySymbols).map(async ([name, symbol]) => {
+          try {
+            const data = await this.fetchFinnhubQuote(symbol, finhubKey);
+            if (data) {
               quotes[name] = {
                 symbol,
-                price: parseFloat(price.toFixed(2)),
-                change: null,
-                percentChange: null,
-                high: null,
-                low: null,
-                open: null,
-                previousClose: null,
+                price: parseFloat(data.c),
+                change: parseFloat(data.d),
+                percentChange: parseFloat(data.dp),
+                high: parseFloat(data.h),
+                low: parseFloat(data.l),
+                open: parseFloat(data.o),
+                previousClose: parseFloat(data.pc),
               };
             }
-          });
-        }
-      } catch (error) {
-        this.logger.error('Commodity API fetch failed:', error.message);
-      }
+          } catch (error) {
+            this.logger.error(`Finnhub ${name} fetch failed:`, error.message);
+          }
+        }),
+      );
 
       // 3. Save all quotes to MongoDB (upsert)
       await Promise.all(
@@ -515,9 +510,9 @@ export class TraderService {
       'QQQ': 'NASDAQ',
       'DIA': 'DOW_JONES',
       'SPY': 'SP500',
-      'XAU': 'GOLD',
-      'XAG': 'SILVER',
-      'WTIOIL-FUT': 'CRUDE_OIL',
+      'GLD': 'GOLD',
+      'SLV': 'SILVER',
+      'USO': 'CRUDE_OIL',
     };
     return symbolMap[symbol] || symbol;
   }

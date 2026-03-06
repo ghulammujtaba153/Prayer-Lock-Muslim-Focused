@@ -83,4 +83,20 @@ export class GeminiService {
       throw error;
     }
   }
+
+  async generateGenericResponse(prompt: string): Promise<string> {
+    if (!this.genAI) throw new Error('Gemini AI not initialized');
+
+    const model = this.genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+    });
+
+    try {
+      const result = await model.generateContent(prompt);
+      return result.response.text().trim();
+    } catch (error: any) {
+      this.logger.error('Gemini Generation Error', error.message);
+      throw error;
+    }
+  }
 }

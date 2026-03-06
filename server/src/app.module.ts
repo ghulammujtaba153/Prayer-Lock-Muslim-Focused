@@ -5,8 +5,6 @@ import { AuthModule } from './auth/auth.module';
 import { DatabaseModule } from './database/database.module';
 import { QuranModule } from './quran/quran.module';
 import { TraderModule } from './trader/trader.module';
-import { PerplexityModule } from './perplexity/perplexity.module';
-import { NarrativeModule } from './narrative/narrative.module';
 import { GeminiModule } from './gemini/gemini.module';
 import { CalendarModule } from './calendar/calendar.module';
 
@@ -21,8 +19,6 @@ import { CalendarModule } from './calendar/calendar.module';
     DatabaseModule,
     QuranModule,
     TraderModule,
-    PerplexityModule,
-    NarrativeModule,
     GeminiModule,
     CalendarModule,
   ],
