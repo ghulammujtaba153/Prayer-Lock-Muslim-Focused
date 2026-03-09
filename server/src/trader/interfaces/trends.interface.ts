@@ -29,6 +29,7 @@ export interface EconomicTrends {
     cpi: TrendValue;
     coreCpi: TrendValue;
     pce: TrendValue;
+    ppi: TrendValue;
     nextRelease: string;
   };
   jobsData: {
@@ -49,5 +50,6 @@ export interface EconomicTrends {
   fedBalanceSheet: TrendValue & {
     mode: 'QE' | 'QT' | 'Neutral';
   };
+  ism: TrendValue;
   lastUpdated: string;
 }

@@ -36,8 +36,9 @@ export class TraderService {
       if (latestTrend) {
         const lastUpdate = new Date(latestTrend.timestamp);
         const hoursDiff = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60);
+        const cacheData = latestTrend.data as any;
         
-        if (hoursDiff < 12 && latestTrend.data && (latestTrend.data as any).fomc) {
+        if (hoursDiff < 12 && cacheData?.fomc && cacheData?.ism) {
           this.logger.log(`Returning cached trends (Last updated: ${lastUpdate.toISOString()})`);
           return latestTrend.data as EconomicTrends;
         }
@@ -231,9 +232,23 @@ export class TraderService {
              sentiment = indicator === 'up' ? 'bearish' : 'bullish';
         }
 
+        // Apply percentage suffix for relevant indicators
+        const needsPercent = type === 'inflation' || (details && details.isRate) || (details && details.isPmi);
+        const suffix = needsPercent ? '%' : '';
+
+        let cleanCurrent = !isNaN(currVal) ? (String(currVal) + suffix) : 'N/A';
+        
+        // Sanity check for PMI
+        if (details?.isPmi && !isNaN(currVal) && (currVal > 150 || currVal < 0)) {
+            cleanCurrent = 'N/A';
+        }
+
         return {
-            current: currVal ? String(currVal) : 'N/A',
-            previous: previous?.filter(p => p !== '.').map(String) || [],
+            current: cleanCurrent,
+            previous: previous?.filter(p => p !== '.').map(p => {
+                const cv = cleanVal(p);
+                return !isNaN(cv) ? (String(cv) + suffix) : String(p);
+            }) || [],
             indicator,
             sentiment,
             details
@@ -246,20 +261,21 @@ export class TraderService {
             previousMeetings: ["2026-01-28", "2025-12-17"],
             sentiment: "Fed is holding rates steady; focus on balance sheet stabilization."
         },
-        interestRate: formatTrend(fred.interestRate?.value, fred.interestRate?.previous, 'rate'),
+        interestRate: formatTrend(fred.interestRate?.value, fred.interestRate?.previous, 'rate', { isRate: true }),
         inflation: {
             cpi: formatTrend(fred.cpi?.value, fred.cpi?.previous, 'inflation'),
             coreCpi: formatTrend(fred.coreCpi?.value, fred.coreCpi?.previous, 'inflation'),
             pce: formatTrend(fred.pce?.value, fred.pce?.previous, 'inflation'),
-            nextRelease: "2026-02-12"
+            ppi: formatTrend(fred.ppi?.value, fred.ppi?.previous, 'inflation'),
+            nextRelease: "2026-03-12"
         },
         jobsData: {
-            unemployment: formatTrend(fred.unemployment?.value, fred.unemployment?.previous, 'employment'),
-            nonFarmPayrolls: formatTrend(fred.nonFarm?.value, fred.nonFarm?.previous, 'employment')
+            unemployment: formatTrend(fred.unemployment?.value, fred.unemployment?.previous, 'employment', { isRate: true }),
+            nonFarmPayrolls: formatTrend(fred.nonFarm?.value, fred.nonFarm?.previous, 'market')
         },
         goldPrice: formatTrend(market.gold.price, getHistoricalValues('goldPrice'), 'market', market.gold.details),
         dxyIndex: formatTrend(market.dxy.price, getHistoricalValues('dxyIndex'), 'neutral', market.dxy.details),
-        btcDominance: formatTrend(crypto?.dominance?.toFixed(2), [], 'market'),
+        btcDominance: formatTrend(crypto?.dominance?.toFixed(2), [], 'market', { isRate: true }),
         etfFlows: {
             dailyNet: formatTrend(fred.etfFlows?.value, fred.etfFlows?.previous, 'market'),
             totalWeekly: "N/A"
@@ -278,6 +294,7 @@ export class TraderService {
             ...formatTrend(fred.balanceSheet?.value, fred.balanceSheet?.previous, 'rate'),
             mode: "Neutral"
         },
+        ism: formatTrend(fred.ism?.value, fred.ism?.previous, 'market', { isPmi: true }),
         lastUpdated: new Date().toISOString()
     };
   }
@@ -288,6 +305,7 @@ export class TraderService {
       { key: 'cpi', id: 'CPIAUCSL', units: 'pc1' },
       { key: 'coreCpi', id: 'CORESTICKM159SFRBATL' },
       { key: 'pce', id: 'PCEPI', units: 'pc1' },
+      { key: 'ppi', id: 'PPIACO', units: 'pc1' },
       { key: 'unemployment', id: 'UNRATE' },
       { key: 'nonFarm', id: 'PAYEMS' },
       { key: 'balanceSheet', id: 'WALCL' },
@@ -297,18 +315,86 @@ export class TraderService {
     await Promise.allSettled(series.map(async ({ key, id, units }) => {
       results[key] = await this.fetchFredSeries(id, units);
     }));
+    // ISM PMI: try multiple sources (Waterfall)
+    if (!results.ism?.value || results.ism.value === '.') {
+      this.logger.log('FRED headline ISM returned no data, trying FMP and fallbacks...');
+      results.ism = await this.fetchIsmPmi();
+    }
     return results;
   }
 
-  private async fetchFredSeries(seriesId: string, units: string = 'lin') {
+  private async fetchFredSeries(seriesId: string, units?: string, silent: boolean = false, limit: number = 5) {
     const apiKey = this.configService.get<string>('FRED_API_KEY');
     if (!apiKey) return null;
     try {
-      const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=5&units=${units}`;
+      let url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=desc&limit=${limit}`;
+      if (units) url += `&units=${units}`;
       const res = await firstValueFrom(this.httpService.get(url));
       const obs = res.data.observations;
-      return obs?.length ? { value: obs[0].value, date: obs[0].date, previous: obs.slice(1, 5).map((o: any) => o.value) } : null;
-    } catch (e) { return null; }
+      return obs?.length ? { value: obs[0].value, date: obs[0].date, previous: obs.slice(1, limit).map((o: any) => o.value) } : null;
+    } catch (e) { 
+      if (!silent) {
+          this.logger.error(`FRED series ${seriesId} fetch failed: ${e.message}`, e.response?.data);
+      }
+      return null; 
+    }
+  }
+
+  /** Try FMP then FRED candidates */
+  private async fetchIsmPmi() {
+    const fmpKey = this.configService.get<string>('FMP_API_KEY');
+    
+    // 1. Try FMP with multiple identifier variants
+    if (fmpKey) {
+        const names = ['ismManufacturingPMI', 'manufacturingPMI', 'ismPMI'];
+        for (const name of names) {
+            try {
+                const res = await firstValueFrom(this.httpService.get(`https://financialmodelingprep.com/api/v4/economic?name=${name}&apikey=${fmpKey}`));
+                const latest = res.data?.[0];
+                if (latest?.value) {
+                    this.logger.log(`ISM PMI resolved via FMP API (${name})`);
+                    return { 
+                        value: latest.value, 
+                        date: latest.date,
+                        previous: res.data.slice(1, 12).map((d: any) => d.value)
+                    };
+                }
+            } catch (e) { 
+                // Silently skip to next name or source
+            }
+        }
+    }
+
+    // 2. Fallback to FRED candidates (Waterfall: Headline -> Employment -> Regionals)
+    const candidates = [
+        { id: 'NAPM', name: 'ISM Manufacturing (Headline)', limit: 12 },
+        { id: 'NAPMNOI', name: 'ISM New Orders', limit: 12 },
+        { id: 'NAPMEI', name: 'ISM Employment', limit: 12 },
+        { id: 'GACDISA066MSFRBNY', name: 'Empire State Manufacturing (Proxy)', type: 'diffusion_0' }
+    ];
+
+    for (const { id, name, type, limit } of candidates) {
+      try {
+        const result: any = await this.fetchFredSeries(id, undefined, true, limit || 5); 
+        if (result?.value && result.value !== '.') {
+          this.logger.log(`ISM PMI resolved via ${name} (${id})`);
+          
+          if (type === 'diffusion_0') {
+              // Empire State is -100 to +100, where 0 is neutral. Scale to 0-100.
+              const norm = (v: any) => (parseFloat(v) + 50).toFixed(1);
+              result.value = norm(result.value);
+              result.previous = result.previous.map(norm);
+              result.isProxy = true;
+          }
+
+          return result;
+        }
+      } catch (error) {
+        // Silently skip to next fallback
+      }
+    }
+    this.logger.error('All ISM PMI sources and proxies failed to resolve');
+    return null;
   }
 
   private async fetchFinnhubQuote(symbol: string, apiKey: string) {
