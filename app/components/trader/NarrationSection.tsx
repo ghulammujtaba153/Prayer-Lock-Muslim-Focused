@@ -39,6 +39,623 @@ function IndicatorIcon({ indicator }: { indicator: string }) {
   return <MdTrendingFlat className="text-gray-400" size={28} />
 }
 
+// ─── FOMC Card Extra ─────────────────────────────────────────────────────────
+
+function FomcCardExtra({ data }: { data: any }) {
+  const fomc = data?.fomc
+  const nextMeeting = fomc?.nextMeeting ?? data?.nextFomcMeeting
+  const summary = fomc?.sentiment ?? 'The Fed is holding rates steady; focus is on balance sheet stabilization.'
+  const previousMeetings: string[] = fomc?.previousMeetings ?? []
+
+  // Days until next meeting
+  let daysUntil: number | null = null
+  let parsedDate: Date | null = null
+  if (nextMeeting && nextMeeting !== 'N/A') {
+    parsedDate = new Date(nextMeeting)
+    if (!isNaN(parsedDate.getTime())) {
+      const now = new Date()
+      daysUntil = Math.ceil((parsedDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    }
+  }
+
+  // Urgency level
+  const urgency =
+    daysUntil === null ? 'unknown'
+    : daysUntil <= 3 ? 'critical'
+    : daysUntil <= 7 ? 'warning'
+    : 'safe'
+
+  const urgencyConfig = {
+    critical: {
+      emoji: '🔴',
+      label: 'Major volatility expected soon',
+      sub: 'Traders often reduce risk before this event.',
+      bg: 'rgba(239,68,68,0.08)',
+      border: 'rgba(239,68,68,0.25)',
+      color: '#f87171',
+      dot: '#ef4444',
+    },
+    warning: {
+      emoji: '🟡',
+      label: `${daysUntil} days away`,
+      sub: 'Markets may start positioning ahead of the Fed decision.',
+      bg: 'rgba(234,179,8,0.08)',
+      border: 'rgba(234,179,8,0.25)',
+      color: '#facc15',
+      dot: '#eab308',
+    },
+    safe: {
+      emoji: '🟢',
+      label: `${daysUntil} days away`,
+      sub: 'Markets are currently in a waiting phase before the next decision.',
+      bg: 'rgba(16,185,129,0.08)',
+      border: 'rgba(16,185,129,0.25)',
+      color: '#34d399',
+      dot: '#10b981',
+    },
+    unknown: {
+      emoji: '⚪',
+      label: 'Date unavailable',
+      sub: 'Check back when the next FOMC date is confirmed.',
+      bg: 'rgba(100,116,139,0.08)',
+      border: 'rgba(100,116,139,0.2)',
+      color: '#94a3b8',
+      dot: '#64748b',
+    },
+  }[urgency]
+
+  return (
+    <div className="space-y-3 mt-1">
+      {/* Urgency Alert */}
+      <div
+        className="flex items-start gap-3 p-3 rounded-xl"
+        style={{ background: urgencyConfig.bg, border: `1px solid ${urgencyConfig.border}` }}
+      >
+        <span className="text-lg leading-none mt-0.5">{urgencyConfig.emoji}</span>
+        <div>
+          <p className="text-xs font-bold" style={{ color: urgencyConfig.color }}>
+            {urgency === 'critical' ? '⚠ ' : ''}{urgencyConfig.label}
+          </p>
+          <p className="text-[11px] mt-0.5" style={{ color: '#848e9c' }}>{urgencyConfig.sub}</p>
+        </div>
+      </div>
+
+      {/* Summary */}
+      {summary && (
+        <div className="p-3 rounded-xl" style={{ background: 'rgba(234,179,8,0.05)', border: '1px solid rgba(234,179,8,0.1)' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: '#848e9c' }}>Summary</p>
+          <p className="text-xs italic leading-relaxed" style={{ color: '#c9d1d9' }}>{summary}</p>
+        </div>
+      )}
+
+      {/* Previous Meetings */}
+      {previousMeetings.length > 0 && (
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: '#848e9c' }}>Previous Meetings</p>
+          <div className="flex gap-1.5 flex-wrap">
+            {previousMeetings.map((d, i) => (
+              <span key={i} className="px-2.5 py-1 rounded-lg text-[11px] font-mono" style={{ background: '#0b0e11', color: '#848e9c' }}>{d}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Narration */}
+      <div className="pt-3 mt-1" style={{ borderTop: '1px solid #2b2f36' }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: '#848e9c' }}>Federal Reserve Policy Meeting</p>
+        <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
+          <p className="text-xs leading-relaxed" style={{ color: '#c9d1d9' }}>
+            The Federal Reserve decides interest rates and liquidity levels.
+          </p>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: '#eab308' }}>Why this matters:</p>
+            <p className="text-xs leading-relaxed" style={{ color: '#848e9c' }}>
+              Fed decisions can move stocks, crypto, and currencies dramatically.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Interest Rate Card Extra ───────────────────────────────────────────────────
+
+function InterestRateCardExtra({ data }: { data: any }) {
+  const ir = data?.interestRate
+  const currentRaw = ir?.current ?? data?.fedFundsRate ?? 'N/A'
+  const previous: string[] = ir?.previous ?? []
+
+  // Determine trend
+  const currentNum = parseFloat(String(currentRaw).replace('%', ''))
+  const prevNum = previous.length > 0 ? parseFloat(String(previous[0]).replace('%', '')) : NaN
+  const trend: 'rising' | 'falling' | 'stable' =
+    isNaN(currentNum) || isNaN(prevNum) ? 'stable'
+    : currentNum > prevNum ? 'rising'
+    : currentNum < prevNum ? 'falling'
+    : 'stable'
+
+  const trendConfig = {
+    rising: { label: 'Rising', color: '#f87171', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.25)', msg: 'Higher borrowing costs usually pressure stocks and crypto.' },
+    falling: { label: 'Falling', color: '#34d399', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.25)', msg: 'Lower rates increase liquidity and support risk assets.' },
+    stable: { label: 'Stable', color: '#facc15', bg: 'rgba(234,179,8,0.08)', border: 'rgba(234,179,8,0.25)', msg: 'Markets usually remain range-bound while rates are unchanged.' },
+  }[trend]
+
+  return (
+    <div className="space-y-3 mt-1">
+      {/* Trend Badge */}
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#848e9c' }}>Trend:</span>
+        <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold" style={{ color: trendConfig.color, background: trendConfig.bg, border: `1px solid ${trendConfig.border}` }}>
+          {trendConfig.label}
+        </span>
+      </div>
+
+      {/* Narration */}
+      <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#848e9c' }}>US Interest Rates</p>
+        <p className="text-xs leading-relaxed" style={{ color: '#c9d1d9' }}>
+          Interest rates represent the cost of borrowing money.
+        </p>
+        <div className="space-y-1 text-xs" style={{ color: '#848e9c' }}>
+          <p className="font-semibold" style={{ color: '#848e9c' }}>When rates rise:</p>
+          <p>• Loans become expensive</p>
+          <p>• Liquidity decreases</p>
+          <p>• Risk assets struggle</p>
+        </div>
+      </div>
+
+      {/* Conditional interpretation */}
+      <div className="p-3 rounded-xl" style={{ background: trendConfig.bg, border: `1px solid ${trendConfig.border}` }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: trendConfig.color }}>{trendConfig.label}:</p>
+        <p className="text-xs leading-relaxed" style={{ color: '#c9d1d9' }}>{trendConfig.msg}</p>
+      </div>
+    </div>
+  )
+}
+
+// ─── CPI Card Extra ───────────────────────────────────────────────────────────
+
+function CpiCardExtra({ data }: { data: any }) {
+  const cpi = data?.inflation?.cpi
+  const currentRaw = cpi?.current ?? cpi?.yoy ?? 'N/A'
+  const previous: string[] = cpi?.previous ?? []
+  const nextRelease: string | undefined = data?.inflation?.nextRelease
+
+  const currentNum = parseFloat(String(currentRaw).replace('%', ''))
+  const prevNum = previous.length > 0 ? parseFloat(String(previous[0]).replace('%', '')) : NaN
+  const trend: 'rising' | 'falling' | 'stable' =
+    isNaN(currentNum) || isNaN(prevNum) ? 'stable'
+    : currentNum > prevNum ? 'rising'
+    : currentNum < prevNum ? 'falling'
+    : 'stable'
+
+  const trendConfig = {
+    rising: { label: 'Rising', color: '#f87171', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.25)', msg: 'Higher inflation may force the Fed to raise interest rates.' },
+    falling: { label: 'Falling', color: '#34d399', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.25)', msg: 'Cooling inflation reduces pressure on the Fed.' },
+    stable: { label: 'Stable', color: '#facc15', bg: 'rgba(234,179,8,0.08)', border: 'rgba(234,179,8,0.25)', msg: 'Inflation is holding steady — Fed is in a monitoring mode.' },
+  }[trend]
+
+  return (
+    <div className="space-y-3 mt-1">
+      {/* Trend Badge */}
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#848e9c' }}>Trend:</span>
+        <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold" style={{ color: trendConfig.color, background: trendConfig.bg, border: `1px solid ${trendConfig.border}` }}>
+          {trendConfig.label}
+        </span>
+        {nextRelease && (
+          <span className="ml-auto text-xs" style={{ color: '#848e9c' }}>Next: <span className="text-yellow-400 font-semibold">{nextRelease}</span></span>
+        )}
+      </div>
+
+      {/* Narration */}
+      <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#848e9c' }}>Consumer Price Inflation</p>
+        <p className="text-xs leading-relaxed" style={{ color: '#c9d1d9' }}>
+          This shows how fast prices are increasing across the economy.
+        </p>
+        <p className="text-xs" style={{ color: '#848e9c' }}>
+          Central banks target around <span className="text-yellow-400 font-semibold">2%</span> inflation.
+        </p>
+      </div>
+
+      {/* Conditional interpretation */}
+      <div className="p-3 rounded-xl" style={{ background: trendConfig.bg, border: `1px solid ${trendConfig.border}` }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: trendConfig.color }}>{trendConfig.label}:</p>
+        <p className="text-xs leading-relaxed" style={{ color: '#c9d1d9' }}>{trendConfig.msg}</p>
+      </div>
+    </div>
+  )
+}
+
+// ─── Core CPI Card Extra ─────────────────────────────────────────────────────
+
+function CoreCpiCardExtra({ data }: { data: any }) {
+  const coreCpiRaw = data?.inflation?.coreCpi?.current ?? 'N/A'
+  const cpiRaw = data?.inflation?.cpi?.current ?? data?.inflation?.cpi?.yoy ?? 'N/A'
+
+  const coreNum = parseFloat(String(coreCpiRaw).replace('%', ''))
+  const cpiNum = parseFloat(String(cpiRaw).replace('%', ''))
+  const pressure: 'strong' | 'weak' =
+    isNaN(coreNum) || isNaN(cpiNum) ? 'weak'
+    : coreNum > cpiNum ? 'strong'
+    : 'weak'
+
+  const pressureConfig = {
+    strong: { label: 'Strong', color: '#f87171', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.25)', msg: 'Inflation may still be persistent beneath the surface.' },
+    weak: { label: 'Weak', color: '#34d399', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.25)', msg: 'Price pressure appears to be cooling broadly.' },
+  }[pressure]
+
+  return (
+    <div className="space-y-3 mt-1">
+      {/* Pressure Badge */}
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#848e9c' }}>Pressure:</span>
+        <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold" style={{ color: pressureConfig.color, background: pressureConfig.bg, border: `1px solid ${pressureConfig.border}` }}>
+          {pressureConfig.label}
+        </span>
+      </div>
+
+      {/* Narration */}
+      <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#848e9c' }}>Core Inflation</p>
+        <p className="text-xs leading-relaxed" style={{ color: '#c9d1d9' }}>
+          Core CPI removes volatile items like food and energy.
+        </p>
+        <p className="text-xs" style={{ color: '#848e9c' }}>
+          This is the number the <span className="text-yellow-400 font-semibold">Federal Reserve</span> watches closely.
+        </p>
+        {!isNaN(coreNum) && !isNaN(cpiNum) && (
+          <div className="flex items-center gap-3 pt-1">
+            <div className="text-center">
+              <p className="text-[9px] uppercase tracking-widest" style={{ color: '#848e9c' }}>Core CPI</p>
+              <p className="text-xs font-mono font-bold text-white">{coreCpiRaw}</p>
+            </div>
+            <div className="text-xs" style={{ color: '#3c424a' }}>vs</div>
+            <div className="text-center">
+              <p className="text-[9px] uppercase tracking-widest" style={{ color: '#848e9c' }}>CPI</p>
+              <p className="text-xs font-mono font-bold text-white">{cpiRaw}</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Conditional interpretation */}
+      <div className="p-3 rounded-xl" style={{ background: pressureConfig.bg, border: `1px solid ${pressureConfig.border}` }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: pressureConfig.color }}>{pressureConfig.label}:</p>
+        <p className="text-xs leading-relaxed" style={{ color: '#c9d1d9' }}>{pressureConfig.msg}</p>
+      </div>
+    </div>
+  )
+}
+
+// ─── PPI Card Extra ────────────────────────────────────────────────────────
+
+function PpiCardExtra({ data }: { data: any }) {
+  const ppi = data?.inflation?.ppi
+  const currentRaw = ppi?.current ?? 'N/A'
+  const previous: string[] = ppi?.previous ?? []
+
+  const currentNum = parseFloat(String(currentRaw).replace('%', ''))
+  const prevNum = previous.length > 0 ? parseFloat(String(previous[0]).replace('%', '')) : NaN
+  const isRising = !isNaN(currentNum) && !isNaN(prevNum) && currentNum > prevNum
+
+  const inflationConfig = isRising
+    ? { label: 'Likely', color: '#f87171', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.25)', msg: 'Rising PPI signals higher costs for businesses, which are often passed on to consumers — a leading indicator of future CPI increases.' }
+    : { label: 'Stable', color: '#34d399', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.25)', msg: 'Producer costs appear stable or cooling, reducing near-term inflation pressure on consumer prices.' }
+
+  return (
+    <div className="space-y-3 mt-1">
+      {/* Future Inflation Badge */}
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#848e9c' }}>Future Inflation:</span>
+        <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold" style={{ color: inflationConfig.color, background: inflationConfig.bg, border: `1px solid ${inflationConfig.border}` }}>
+          {inflationConfig.label}
+        </span>
+      </div>
+
+      {/* Narration */}
+      <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#848e9c' }}>Producer Price Index</p>
+        <p className="text-xs leading-relaxed" style={{ color: '#c9d1d9' }}>
+          Measures costs businesses pay to produce goods.
+        </p>
+        <p className="text-xs" style={{ color: '#848e9c' }}>
+          Higher PPI often leads to <span className="text-yellow-400 font-semibold">future CPI increases</span> as businesses pass on costs.
+        </p>
+        {/* Previous values */}
+        {previous.length > 0 && (
+          <div className="flex gap-1.5 flex-wrap pt-1">
+            <span className="text-[9px] uppercase tracking-widest font-bold mr-1" style={{ color: '#848e9c' }}>Prev:</span>
+            {previous.slice(0, 4).map((v, i) => (
+              <span key={i} className="px-2 py-0.5 rounded text-[10px] font-mono" style={{ background: '#0b0e11', color: '#848e9c' }}>{v}</span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Conditional interpretation */}
+      <div className="p-3 rounded-xl" style={{ background: inflationConfig.bg, border: `1px solid ${inflationConfig.border}` }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: inflationConfig.color }}>Future Inflation {inflationConfig.label}:</p>
+        <p className="text-xs leading-relaxed" style={{ color: '#c9d1d9' }}>{inflationConfig.msg}</p>
+      </div>
+    </div>
+  )
+}
+
+// ─── ISM PMI Card Extra ─────────────────────────────────────────────────────
+
+function IsmPmiCardExtra({ data }: { data: any }) {
+  const ism = data?.ism
+  const currentRaw = ism?.current ?? 'N/A'
+  const previous: string[] = ism?.previous ?? []
+  const currentNum = parseFloat(String(currentRaw))
+
+  const isExpanding = !isNaN(currentNum) && currentNum > 50
+  const isContracting = !isNaN(currentNum) && currentNum < 50
+
+  const economyConfig =
+    isExpanding
+      ? { label: 'Expanding', color: '#34d399', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.25)', msg: 'Economic activity remains strong. Businesses are expanding production and hiring.' }
+      : isContracting
+      ? { label: 'Contracting', color: '#f87171', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.25)', msg: 'Businesses may be reducing production. A reading below 50 signals economic slowdown.' }
+      : { label: 'Neutral', color: '#facc15', bg: 'rgba(234,179,8,0.08)', border: 'rgba(234,179,8,0.25)', msg: 'The economy is at a neutral inflection point near the 50 threshold.' }
+
+  // Gauge position: 0 (full left = 0) to 100 (full right = 100), midpoint at 50
+  const gaugePercent = !isNaN(currentNum) ? Math.min(Math.max(((currentNum - 30) / 40) * 100, 0), 100) : 50
+
+  return (
+    <div className="space-y-3 mt-1">
+      {/* Economy status badge */}
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#848e9c' }}>Economy:</span>
+        <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold" style={{ color: economyConfig.color, background: economyConfig.bg, border: `1px solid ${economyConfig.border}` }}>
+          {economyConfig.label}
+        </span>
+      </div>
+
+      {/* Gauge or Placeholder */}
+      {!isNaN(currentNum) ? (
+        <div className="p-3 rounded-xl" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
+          <div className="flex justify-between text-[10px] font-bold uppercase mb-2" style={{ color: '#848e9c' }}>
+            <span className="text-red-400">Contracting</span>
+            <span className="font-mono text-white text-xs">{currentRaw}</span>
+            <span className="text-emerald-400">Expanding</span>
+          </div>
+          <div className="relative h-2 rounded-full overflow-hidden" style={{ background: '#2b3139' }}>
+            {/* Gradient track */}
+            <div className="absolute inset-0 rounded-full" style={{ background: 'linear-gradient(to right, #ef4444 0%, #eab308 45%, #10b981 100%)' }} />
+            {/* Midpoint line */}
+            <div className="absolute top-0 bottom-0 w-px" style={{ left: '50%', background: 'rgba(255,255,255,0.4)' }} />
+            {/* Indicator Dot */}
+            <div
+              className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-white shadow-lg transition-all duration-700 ease-out"
+              style={{ left: `calc(${gaugePercent}% - 6px)`, background: economyConfig.color }}
+            />
+          </div>
+          <div className="flex justify-between text-[9px] mt-1" style={{ color: '#3c424a' }}>
+            <span>30</span><span>50 pivot</span><span>70</span>
+          </div>
+        </div>
+      ) : (
+        <div className="p-4 rounded-xl text-center" style={{ background: 'rgba(0,0,0,0.2)', border: '1px dashed #2b2f36' }}>
+           <p className="text-[10px] font-bold uppercase text-yellow-500/70 mb-1">Data Pending Refresh</p>
+           <p className="text-xs text-[#848e9c]">ISM Manufacturing data is currently being updated or restricted by the provider.</p>
+        </div>
+      )}
+
+      {/* Narration */}
+      <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#848e9c' }}>ISM PMI Narration</p>
+        <p className="text-xs leading-relaxed text-gray-300">
+          PMI measures business activity across the economy. Above 50 = growth, below 50 = slowdown.
+        </p>
+        <div className="pt-1">
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-1 text-emerald-400">Expansion:</p>
+          <p className="text-xs text-gray-400">Economic activity remains strong.</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-1 text-red-400">Contraction:</p>
+          <p className="text-xs text-gray-400">Businesses may be reducing production.</p>
+        </div>
+      </div>
+
+      {/* Conditional interpretation */}
+      <div className="p-3 rounded-xl" style={{ background: economyConfig.bg, border: `1px solid ${economyConfig.border}` }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: economyConfig.color }}>{economyConfig.label}:</p>
+        <p className="text-xs leading-relaxed" style={{ color: '#c9d1d9' }}>{economyConfig.msg}</p>
+      </div>
+    </div>
+  )
+}
+
+function EmploymentCardExtra({ data }: { data: any }) {
+  const ur = data?.jobsData?.unemployment
+  const currentNum = parseFloat(String(ur?.current).replace('%', ''))
+  const prevNum = ur?.previous?.length > 0 ? parseFloat(String(ur.previous[0]).replace('%', '')) : NaN
+  const isRising = currentNum > prevNum
+  const isFalling = currentNum < prevNum
+
+  const config = isRising
+    ? { label: 'Weakening', color: '#f87171', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.25)', msg: 'Economy weakening' }
+    : isFalling
+    ? { label: 'Strong', color: '#34d399', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.25)', msg: 'Economy strong' }
+    : { label: 'Stable', color: '#facc15', bg: 'rgba(234,179,8,0.08)', border: 'rgba(234,179,8,0.25)', msg: 'Stable' }
+
+  return (
+    <div className="space-y-3 mt-1">
+      <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#848e9c]">Purpose</p>
+        <p className="text-xs leading-relaxed text-[#c9d1d9]">Show labor market strength.</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest mt-2" style={{ color: '#848e9c' }}>Narration</p>
+        <p className="text-xs leading-relaxed" style={{ color: '#848e9c' }}>
+          The labor market is a key indicator of economic health. Strong employment may lead to higher interest rates.
+        </p>
+      </div>
+      <div className="p-3 rounded-xl" style={{ background: config.bg, border: `1px solid ${config.border}` }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: config.color }}>Analysis:</p>
+        <p className="text-xs font-bold italic" style={{ color: config.color }}>{config.msg}</p>
+      </div>
+    </div>
+  )
+}
+
+function GoldCardExtra({ data }: { data: any }) {
+  const gold = data?.goldPrice
+  const currentNum = parseFloat(String(gold?.current).replace('$', '').replace(',', ''))
+  const prevNum = gold?.previous?.length > 0 ? parseFloat(String(gold.previous[0]).replace('$', '').replace(',', '')) : NaN
+  const isRisingStrongly = currentNum > prevNum * 1.005 // 0.5% move as 'strong'
+
+  const config = isRisingStrongly
+    ? { label: 'High', color: '#f87171', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.25)', msg: 'Risk Aversion: High' }
+    : currentNum < prevNum
+    ? { label: 'Low', color: '#34d399', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.25)', msg: 'Risk Aversion: Low' }
+    : { label: 'Normal', color: '#facc15', bg: 'rgba(234,179,8,0.08)', border: 'rgba(234,179,8,0.25)', msg: 'Risk Aversion: Normal' }
+
+  return (
+    <div className="space-y-3 mt-1">
+      <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#848e9c]">Purpose</p>
+        <p className="text-xs leading-relaxed text-[#c9d1d9]">Detect market fear.</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest mt-2" style={{ color: '#848e9c' }}>Narration</p>
+        <p className="text-xs leading-relaxed text-[#848e9c]">
+          Gold is often used as a safe haven asset. When gold rises quickly, investors may be moving away from risk.
+        </p>
+      </div>
+      <div className="p-3 rounded-xl" style={{ background: config.bg, border: `1px solid ${config.border}` }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: config.color }}>Risk Sentiment:</p>
+        <p className="text-xs font-bold italic" style={{ color: config.color }}>{config.msg}</p>
+      </div>
+    </div>
+  )
+}
+
+function OilCardExtra({ data }: { data: any }) {
+  const q = data?.quotes?.CRUDE_OIL
+  const isRising = q?.change > 0
+
+  const config = isRising
+    ? { label: 'Higher', color: '#f87171', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.25)', msg: 'Inflation Risk: Higher' }
+    : { label: 'Lower', color: '#34d399', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.25)', msg: 'Inflation Risk: Lower' }
+
+  return (
+    <div className="space-y-3 mt-1">
+      <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#848e9c]">Purpose</p>
+        <p className="text-xs leading-relaxed text-[#c9d1d9]">Detect inflation pressure.</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest mt-2" style={{ color: '#848e9c' }}>Narration</p>
+        <p className="text-xs leading-relaxed text-[#848e9c]">
+          Oil prices influence transport, production, and energy costs. Higher oil often leads to higher inflation.
+        </p>
+      </div>
+      <div className="p-3 rounded-xl" style={{ background: config.bg, border: `1px solid ${config.border}` }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: config.color }}>Analysis:</p>
+        <p className="text-xs font-bold italic" style={{ color: config.color }}>{config.msg}</p>
+      </div>
+    </div>
+  )
+}
+
+function DxyCardExtra({ data }: { data: any }) {
+  const dxy = data?.dxyIndex
+  const isRising = dxy?.indicator === 'up'
+
+  const config = isRising
+    ? { label: 'Tightening', color: '#f87171', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.25)', msg: 'Global Liquidity: Tightening' }
+    : { label: 'Increasing', color: '#34d399', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.25)', msg: 'Global Liquidity: Increasing' }
+
+  return (
+    <div className="space-y-3 mt-1">
+      <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#848e9c]">Purpose</p>
+        <p className="text-xs leading-relaxed text-[#c9d1d9]">Measure global dollar strength.</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest mt-2" style={{ color: '#848e9c' }}>Narration</p>
+        <p className="text-xs leading-relaxed text-[#848e9c]">
+          A stronger dollar can pull liquidity out of global markets. Crypto and emerging markets often struggle when the dollar rises.
+        </p>
+      </div>
+      <div className="p-3 rounded-xl" style={{ background: config.bg, border: `1px solid ${config.border}` }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: config.color }}>Status:</p>
+        <p className="text-xs font-bold italic" style={{ color: config.color }}>{config.msg}</p>
+      </div>
+    </div>
+  )
+}
+
+function BtcDominanceCardExtra({ data }: { data: any }) {
+  const dom = data?.btcDominance
+  const isRising = dom?.indicator === 'up'
+
+  const config = isRising
+    ? { label: 'Bitcoin', color: '#facc15', bg: 'rgba(234,179,8,0.08)', border: 'rgba(234,179,8,0.25)', msg: 'Capital flowing to Bitcoin' }
+    : { label: 'Altcoins', color: '#34d399', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.25)', msg: 'Capital flowing to Altcoins' }
+
+  return (
+    <div className="space-y-3 mt-1">
+      <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#848e9c]">Purpose</p>
+        <p className="text-xs leading-relaxed text-[#c9d1d9]">Understand crypto capital flows.</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest mt-2" style={{ color: '#848e9c' }}>Narration</p>
+        <p className="text-xs leading-relaxed text-[#848e9c]">BTC dominance shows where crypto money is flowing.</p>
+      </div>
+      <div className="p-3 rounded-xl" style={{ background: config.bg, border: `1px solid ${config.border}` }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: config.color }}>Capital Flow:</p>
+        <p className="text-xs font-bold italic" style={{ color: config.color }}>{config.msg}</p>
+      </div>
+    </div>
+  )
+}
+
+function EtfFlowsCardExtra({ data }: { data: any }) {
+  const etf = data?.etfFlows
+  const currentStr = String(etf?.dailyNet?.current)
+  const isPositive = currentStr.includes('+') || (!currentStr.includes('-') && parseFloat(currentStr) > 0)
+
+  const config = isPositive
+    ? { label: 'Buying', color: '#34d399', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.25)', msg: 'Institutional Buying: True' }
+    : { label: 'Selling', color: '#f87171', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.25)', msg: 'Institutional Selling: True' }
+
+  return (
+    <div className="space-y-3 mt-1">
+      <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#848e9c]">Purpose</p>
+        <p className="text-xs leading-relaxed text-[#c9d1d9]">Track institutional investment.</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest mt-2" style={{ color: '#848e9c' }}>Narration</p>
+        <p className="text-xs leading-relaxed text-[#848e9c]">ETF flows represent large institutional capital movements.</p>
+      </div>
+      <div className="p-3 rounded-xl" style={{ background: config.bg, border: `1px solid ${config.border}` }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: config.color }}>Activity:</p>
+        <p className="text-xs font-bold italic" style={{ color: config.color }}>{config.msg}</p>
+      </div>
+    </div>
+  )
+}
+
+function FedBalanceSheetCardExtra({ data }: { data: any }) {
+  const bs = data?.fedBalanceSheet
+  const isExpanding = bs?.indicator === 'up'
+
+  const config = isExpanding
+    ? { label: 'Increasing', color: '#34d399', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.25)', msg: 'Liquidity: Increasing' }
+    : { label: 'Tightening', color: '#f87171', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.25)', msg: 'Liquidity: Tightening' }
+
+  return (
+    <div className="space-y-3 mt-1">
+      <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#848e9c]">Purpose</p>
+        <p className="text-xs leading-relaxed text-[#c9d1d9]">Measure global liquidity.</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest mt-2" style={{ color: '#848e9c' }}>Narration</p>
+        <p className="text-xs leading-relaxed text-[#848e9c]">The Fed balance sheet shows how much money is injected into the financial system.</p>
+      </div>
+      <div className="p-3 rounded-xl" style={{ background: config.bg, border: `1px solid ${config.border}` }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: config.color }}>Status:</p>
+        <p className="text-xs font-bold italic" style={{ color: config.color }}>{config.msg}</p>
+      </div>
+    </div>
+  )
+}
+
 // ─── Card definitions ─────────────────────────────────────────────────────────
 
 interface CardDef {
@@ -53,23 +670,31 @@ interface CardDef {
 const CARDS: CardDef[] = [
   {
     key: 'fomc',
-    title: 'FOMC Calendar',
+    title: 'FOMC Meeting',
+    detailLabel: 'Next FOMC Meeting Date',
     icon: MdEvent,
     getData: (data) => {
       const fomc = data?.fomc
+      const nextMeeting = fomc?.nextMeeting ?? data?.nextFomcMeeting ?? 'N/A'
+      // Compute days until to set urgency as sentiment
+      let sentiment: 'bullish' | 'bearish' | 'neutral' = 'neutral'
+      if (nextMeeting !== 'N/A') {
+        const d = new Date(nextMeeting)
+        if (!isNaN(d.getTime())) {
+          const days = Math.ceil((d.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+          if (days <= 3) sentiment = 'bearish'
+          else if (days <= 7) sentiment = 'neutral'
+          else sentiment = 'bullish'
+        }
+      }
       return {
-        current: fomc?.nextMeeting ?? data?.nextFomcMeeting ?? 'N/A',
-        previous: fomc?.previousMeetings ?? [],
+        current: nextMeeting,
+        previous: [],
         indicator: 'neutral',
-        sentiment: 'neutral',
+        sentiment,
       }
     },
-    renderExtra: (data) => data?.fomc?.sentiment
-      ? (
-        <div className="p-3 rounded-xl mt-3" style={{ background: 'rgba(234,179,8,0.05)', border: '1px solid rgba(234,179,8,0.1)' }}>
-          <p className="text-xs italic leading-relaxed" style={{ color: '#848e9c' }}>{data.fomc.sentiment}</p>
-        </div>
-      ) : null,
+    renderExtra: (data) => <FomcCardExtra data={data} />,
   },
   {
     key: 'interestRate',
@@ -77,15 +702,14 @@ const CARDS: CardDef[] = [
     detailLabel: 'Fed Funds Target Rate',
     icon: MdAccountBalance,
     getData: (data) => data?.interestRate ?? { current: data?.fedFundsRate ?? 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
+    renderExtra: (data) => <InterestRateCardExtra data={data} />,
   },
   {
     key: 'cpi',
     title: 'CPI (YoY)',
     icon: MdTimeline,
     getData: (data) => data?.inflation?.cpi ?? { current: data?.inflation?.cpi?.yoy ?? 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
-    renderExtra: (data) => data?.inflation?.nextRelease
-      ? <p className="text-xs mt-2" style={{ color: '#848e9c' }}>Next Release: <span className="text-yellow-400 font-semibold">{data.inflation.nextRelease}</span></p>
-      : null,
+    renderExtra: (data) => <CpiCardExtra data={data} />,
   },
   {
     key: 'coreCpi',
@@ -93,6 +717,7 @@ const CARDS: CardDef[] = [
     detailLabel: 'Excludes food & energy',
     icon: MdTimeline,
     getData: (data) => data?.inflation?.coreCpi ?? { current: 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
+    renderExtra: (data) => <CoreCpiCardExtra data={data} />,
   },
   {
     key: 'pce',
@@ -102,32 +727,84 @@ const CARDS: CardDef[] = [
     getData: (data) => data?.inflation?.pce ?? { current: 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
   },
   {
-    key: 'unemployment',
-    title: 'Unemployment Rate',
-    detailLabel: 'U-3 Official Rate',
-    icon: MdBarChart,
-    getData: (data) => data?.jobsData?.unemployment ?? { current: data?.laborMarket?.unemploymentRate ?? 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
+    key: 'ppi',
+    title: 'PPI Inflation',
+    detailLabel: 'Producer Price Index (YoY)',
+    icon: MdTimeline,
+    getData: (data) => data?.inflation?.ppi ?? { current: 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
+    renderExtra: (data) => <PpiCardExtra data={data} />,
   },
   {
-    key: 'nfp',
-    title: 'NFP Payrolls',
-    detailLabel: 'Monthly jobs added',
+    key: 'ism',
+    title: 'ISM PMI',
+    detailLabel: 'Manufacturing Activity Index',
     icon: MdBarChart,
-    getData: (data) => data?.jobsData?.nonFarmPayrolls ?? { current: data?.laborMarket?.nonFarmPayrolls ?? 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
+    getData: (data) => {
+      const ism = data?.ism
+      if (!ism) return { current: 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' }
+      const val = parseFloat(String(ism.current))
+      const sentiment: 'bullish' | 'bearish' | 'neutral' =
+        isNaN(val) ? 'neutral' : val > 50 ? 'bullish' : val < 50 ? 'bearish' : 'neutral'
+      return { ...ism, sentiment }
+    },
+    renderExtra: (data) => <IsmPmiCardExtra data={data} />,
+  },
+  {
+    key: 'unemployment',
+    title: 'Unemployment Rate',
+    detailLabel: 'Labor Market Strength',
+    icon: MdBarChart,
+    getData: (data) => data?.jobsData?.unemployment ?? { current: 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
+    renderExtra: (data) => <EmploymentCardExtra data={data} />,
   },
   {
     key: 'gold',
-    title: 'Gold Price',
-    detailLabel: 'Spot Price / USD',
+    title: 'Gold',
+    detailLabel: 'Safe Haven Asset',
     icon: FaCoins,
     getData: (data) => data?.goldPrice ?? { current: 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
+    renderExtra: (data) => <GoldCardExtra data={data} />,
+  },
+  {
+    key: 'crudeOil',
+    title: 'Oil',
+    detailLabel: 'Inflation Pressure Detection',
+    icon: FaOilCan,
+    getData: (data) => {
+      const q = data?.quotes?.CRUDE_OIL
+      if (!q) return { current: 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' }
+      return {
+        current: `$${q.price?.toFixed(2)}`,
+        previous: [],
+        indicator: q.change > 0 ? 'up' : 'down',
+        sentiment: q.change > 0 ? 'bearish' : 'bullish'
+      }
+    },
+    renderExtra: (data) => <OilCardExtra data={data} />,
   },
   {
     key: 'dxy',
-    title: 'DXY Index',
-    detailLabel: 'US Dollar Strength Index',
+    title: 'Dollar Index (DXY)',
+    detailLabel: 'Global Dollar Strength',
     icon: MdPublic,
     getData: (data) => data?.dxyIndex ?? { current: 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
+    renderExtra: (data) => <DxyCardExtra data={data} />,
+  },
+  {
+    key: 'btcDominance',
+    title: 'BTC Dominance',
+    detailLabel: 'Crypto Capital Flows',
+    icon: FaBitcoin,
+    getData: (data) => data?.btcDominance ?? { current: 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
+    renderExtra: (data) => <BtcDominanceCardExtra data={data} />,
+  },
+  {
+    key: 'etfFlows',
+    title: 'ETF Flows',
+    detailLabel: 'Institutional Investment',
+    icon: MdAttachMoney,
+    getData: (data) => data?.etfFlows?.dailyNet ?? { current: 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
+    renderExtra: (data) => <EtfFlowsCardExtra data={data} />,
   },
   {
     key: 'bitcoin',
@@ -231,22 +908,6 @@ const CARDS: CardDef[] = [
     }
   },
   {
-    key: 'crudeOil',
-    title: 'Crude Oil',
-    detailLabel: 'WTI Crude (USD/Barrel)',
-    icon: FaOilCan,
-    getData: (data) => {
-      const q = data?.quotes?.CRUDE_OIL
-      if (!q) return { current: 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' }
-      return {
-        current: `$${q.price?.toFixed(2)}`,
-        previous: [],
-        indicator: 'neutral', // We don't have change data from commodity api currently
-        sentiment: 'neutral'
-      }
-    }
-  },
-  {
     key: 'silver',
     title: 'Silver Price',
     detailLabel: 'Spot Price (USD/oz)',
@@ -262,15 +923,7 @@ const CARDS: CardDef[] = [
       }
     }
   },
-  {
-    key: 'etfFlows',
-    title: 'ETF Net Flows',
-    icon: MdAttachMoney,
-    getData: (data) => data?.etfFlows?.dailyNet ?? { current: 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
-    renderExtra: (data) => data?.etfFlows?.totalWeekly
-      ? <p className="text-xs mt-2" style={{ color: '#848e9c' }}>Weekly Total: <span className="text-yellow-400 font-semibold">{data.etfFlows.totalWeekly}</span></p>
-      : null,
-  },
+
   {
     key: 'vix',
     title: 'VIX Index',
@@ -279,26 +932,12 @@ const CARDS: CardDef[] = [
     getData: (data) => data?.riskIndicators?.vix ?? { current: 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
   },
   {
-    key: 'fearGreed',
-    title: 'Fear & Greed',
-    detailLabel: 'Crypto Market Sentiment (0–100)',
-    icon: MdSecurity,
-    getData: (data) => data?.riskIndicators?.fearGreed ?? { current: 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
-  },
-  {
     key: 'fedBalanceSheet',
     title: 'Fed Balance Sheet',
+    detailLabel: 'Central Bank Assets',
     icon: MdAccountBalance,
-    getData: (data) => data?.fedBalanceSheet ?? { current: data?.fedBalanceSheet?.split?.(' ')[0] ?? 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
-    renderExtra: (data) => data?.fedBalanceSheet?.mode
-      ? (
-        <div className="mt-3 flex items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-widest" style={{ color: '#848e9c' }}>Mode:</span>
-          <span className={`px-2 py-0.5 rounded text-xs font-bold ${data.fedBalanceSheet.mode === 'QT' ? 'text-red-400 bg-red-500/10' : 'text-emerald-400 bg-emerald-500/10'}`}>
-            {data.fedBalanceSheet.mode}
-          </span>
-        </div>
-      ) : null,
+    getData: (data) => data?.fedBalanceSheet ?? { current: 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
+    renderExtra: (data) => <FedBalanceSheetCardExtra data={data} />,
   },
 ]
 
