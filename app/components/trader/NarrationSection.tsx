@@ -139,22 +139,6 @@ function FomcCardExtra({ data }: { data: any }) {
           </div>
         </div>
       )}
-
-      {/* Narration */}
-      <div className="pt-3 mt-1" style={{ borderTop: '1px solid #2b2f36' }}>
-        <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: '#848e9c' }}>Federal Reserve Policy Meeting</p>
-        <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
-          <p className="text-xs leading-relaxed" style={{ color: '#c9d1d9' }}>
-            The Federal Reserve decides interest rates and liquidity levels.
-          </p>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: '#eab308' }}>Why this matters:</p>
-            <p className="text-xs leading-relaxed" style={{ color: '#848e9c' }}>
-              Fed decisions can move stocks, crypto, and currencies dramatically.
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }
@@ -178,7 +162,7 @@ function InterestRateCardExtra({ data }: { data: any }) {
   const trendConfig = {
     rising: { label: 'Rising', color: '#f87171', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.25)', msg: 'Higher borrowing costs usually pressure stocks and crypto.' },
     falling: { label: 'Falling', color: '#34d399', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.25)', msg: 'Lower rates increase liquidity and support risk assets.' },
-    stable: { label: 'Stable', color: '#facc15', bg: 'rgba(234,179,8,0.08)', border: 'rgba(234,179,8,0.25)', msg: 'Markets usually remain range-bound while rates are unchanged.' },
+    stable: { label: 'Stable', color: '#facc15', bg: 'rgba(234,179,8,0.08)', border: 'rgba(234,179,8,0.25)', msg: 'Markets usually remain range bound.' },
   }[trend]
 
   return (
@@ -189,20 +173,6 @@ function InterestRateCardExtra({ data }: { data: any }) {
         <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold" style={{ color: trendConfig.color, background: trendConfig.bg, border: `1px solid ${trendConfig.border}` }}>
           {trendConfig.label}
         </span>
-      </div>
-
-      {/* Narration */}
-      <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
-        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#848e9c' }}>US Interest Rates</p>
-        <p className="text-xs leading-relaxed" style={{ color: '#c9d1d9' }}>
-          Interest rates represent the cost of borrowing money.
-        </p>
-        <div className="space-y-1 text-xs" style={{ color: '#848e9c' }}>
-          <p className="font-semibold" style={{ color: '#848e9c' }}>When rates rise:</p>
-          <p>• Loans become expensive</p>
-          <p>• Liquidity decreases</p>
-          <p>• Risk assets struggle</p>
-        </div>
       </div>
 
       {/* Conditional interpretation */}
@@ -249,17 +219,6 @@ function CpiCardExtra({ data }: { data: any }) {
         )}
       </div>
 
-      {/* Narration */}
-      <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
-        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#848e9c' }}>Consumer Price Inflation</p>
-        <p className="text-xs leading-relaxed" style={{ color: '#c9d1d9' }}>
-          This shows how fast prices are increasing across the economy.
-        </p>
-        <p className="text-xs" style={{ color: '#848e9c' }}>
-          Central banks target around <span className="text-yellow-400 font-semibold">2%</span> inflation.
-        </p>
-      </div>
-
       {/* Conditional interpretation */}
       <div className="p-3 rounded-xl" style={{ background: trendConfig.bg, border: `1px solid ${trendConfig.border}` }}>
         <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: trendConfig.color }}>{trendConfig.label}:</p>
@@ -297,30 +256,6 @@ function CoreCpiCardExtra({ data }: { data: any }) {
         </span>
       </div>
 
-      {/* Narration */}
-      <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
-        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#848e9c' }}>Core Inflation</p>
-        <p className="text-xs leading-relaxed" style={{ color: '#c9d1d9' }}>
-          Core CPI removes volatile items like food and energy.
-        </p>
-        <p className="text-xs" style={{ color: '#848e9c' }}>
-          This is the number the <span className="text-yellow-400 font-semibold">Federal Reserve</span> watches closely.
-        </p>
-        {!isNaN(coreNum) && !isNaN(cpiNum) && (
-          <div className="flex items-center gap-3 pt-1">
-            <div className="text-center">
-              <p className="text-[9px] uppercase tracking-widest" style={{ color: '#848e9c' }}>Core CPI</p>
-              <p className="text-xs font-mono font-bold text-white">{coreCpiRaw}</p>
-            </div>
-            <div className="text-xs" style={{ color: '#3c424a' }}>vs</div>
-            <div className="text-center">
-              <p className="text-[9px] uppercase tracking-widest" style={{ color: '#848e9c' }}>CPI</p>
-              <p className="text-xs font-mono font-bold text-white">{cpiRaw}</p>
-            </div>
-          </div>
-        )}
-      </div>
-
       {/* Conditional interpretation */}
       <div className="p-3 rounded-xl" style={{ background: pressureConfig.bg, border: `1px solid ${pressureConfig.border}` }}>
         <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: pressureConfig.color }}>{pressureConfig.label}:</p>
@@ -355,26 +290,6 @@ function PpiCardExtra({ data }: { data: any }) {
         </span>
       </div>
 
-      {/* Narration */}
-      <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
-        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#848e9c' }}>Producer Price Index</p>
-        <p className="text-xs leading-relaxed" style={{ color: '#c9d1d9' }}>
-          Measures costs businesses pay to produce goods.
-        </p>
-        <p className="text-xs" style={{ color: '#848e9c' }}>
-          Higher PPI often leads to <span className="text-yellow-400 font-semibold">future CPI increases</span> as businesses pass on costs.
-        </p>
-        {/* Previous values */}
-        {previous.length > 0 && (
-          <div className="flex gap-1.5 flex-wrap pt-1">
-            <span className="text-[9px] uppercase tracking-widest font-bold mr-1" style={{ color: '#848e9c' }}>Prev:</span>
-            {previous.slice(0, 4).map((v, i) => (
-              <span key={i} className="px-2 py-0.5 rounded text-[10px] font-mono" style={{ background: '#0b0e11', color: '#848e9c' }}>{v}</span>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* Conditional interpretation */}
       <div className="p-3 rounded-xl" style={{ background: inflationConfig.bg, border: `1px solid ${inflationConfig.border}` }}>
         <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: inflationConfig.color }}>Future Inflation {inflationConfig.label}:</p>
@@ -389,7 +304,6 @@ function PpiCardExtra({ data }: { data: any }) {
 function IsmPmiCardExtra({ data }: { data: any }) {
   const ism = data?.ism
   const currentRaw = ism?.current ?? 'N/A'
-  const previous: string[] = ism?.previous ?? []
   const currentNum = parseFloat(String(currentRaw))
 
   const isExpanding = !isNaN(currentNum) && currentNum > 50
@@ -445,22 +359,6 @@ function IsmPmiCardExtra({ data }: { data: any }) {
         </div>
       )}
 
-      {/* Narration */}
-      <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
-        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#848e9c' }}>ISM PMI Narration</p>
-        <p className="text-xs leading-relaxed text-gray-300">
-          PMI measures business activity across the economy. Above 50 = growth, below 50 = slowdown.
-        </p>
-        <div className="pt-1">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-1 text-emerald-400">Expansion:</p>
-          <p className="text-xs text-gray-400">Economic activity remains strong.</p>
-        </div>
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-1 text-red-400">Contraction:</p>
-          <p className="text-xs text-gray-400">Businesses may be reducing production.</p>
-        </div>
-      </div>
-
       {/* Conditional interpretation */}
       <div className="p-3 rounded-xl" style={{ background: economyConfig.bg, border: `1px solid ${economyConfig.border}` }}>
         <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: economyConfig.color }}>{economyConfig.label}:</p>
@@ -485,14 +383,6 @@ function EmploymentCardExtra({ data }: { data: any }) {
 
   return (
     <div className="space-y-3 mt-1">
-      <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-[#848e9c]">Purpose</p>
-        <p className="text-xs leading-relaxed text-[#c9d1d9]">Show labor market strength.</p>
-        <p className="text-[10px] font-bold uppercase tracking-widest mt-2" style={{ color: '#848e9c' }}>Narration</p>
-        <p className="text-xs leading-relaxed" style={{ color: '#848e9c' }}>
-          The labor market is a key indicator of economic health. Strong employment may lead to higher interest rates.
-        </p>
-      </div>
       <div className="p-3 rounded-xl" style={{ background: config.bg, border: `1px solid ${config.border}` }}>
         <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: config.color }}>Analysis:</p>
         <p className="text-xs font-bold italic" style={{ color: config.color }}>{config.msg}</p>
@@ -515,14 +405,6 @@ function GoldCardExtra({ data }: { data: any }) {
 
   return (
     <div className="space-y-3 mt-1">
-      <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-[#848e9c]">Purpose</p>
-        <p className="text-xs leading-relaxed text-[#c9d1d9]">Detect market fear.</p>
-        <p className="text-[10px] font-bold uppercase tracking-widest mt-2" style={{ color: '#848e9c' }}>Narration</p>
-        <p className="text-xs leading-relaxed text-[#848e9c]">
-          Gold is often used as a safe haven asset. When gold rises quickly, investors may be moving away from risk.
-        </p>
-      </div>
       <div className="p-3 rounded-xl" style={{ background: config.bg, border: `1px solid ${config.border}` }}>
         <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: config.color }}>Risk Sentiment:</p>
         <p className="text-xs font-bold italic" style={{ color: config.color }}>{config.msg}</p>
@@ -541,14 +423,6 @@ function OilCardExtra({ data }: { data: any }) {
 
   return (
     <div className="space-y-3 mt-1">
-      <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-[#848e9c]">Purpose</p>
-        <p className="text-xs leading-relaxed text-[#c9d1d9]">Detect inflation pressure.</p>
-        <p className="text-[10px] font-bold uppercase tracking-widest mt-2" style={{ color: '#848e9c' }}>Narration</p>
-        <p className="text-xs leading-relaxed text-[#848e9c]">
-          Oil prices influence transport, production, and energy costs. Higher oil often leads to higher inflation.
-        </p>
-      </div>
       <div className="p-3 rounded-xl" style={{ background: config.bg, border: `1px solid ${config.border}` }}>
         <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: config.color }}>Analysis:</p>
         <p className="text-xs font-bold italic" style={{ color: config.color }}>{config.msg}</p>
@@ -567,14 +441,6 @@ function DxyCardExtra({ data }: { data: any }) {
 
   return (
     <div className="space-y-3 mt-1">
-      <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-[#848e9c]">Purpose</p>
-        <p className="text-xs leading-relaxed text-[#c9d1d9]">Measure global dollar strength.</p>
-        <p className="text-[10px] font-bold uppercase tracking-widest mt-2" style={{ color: '#848e9c' }}>Narration</p>
-        <p className="text-xs leading-relaxed text-[#848e9c]">
-          A stronger dollar can pull liquidity out of global markets. Crypto and emerging markets often struggle when the dollar rises.
-        </p>
-      </div>
       <div className="p-3 rounded-xl" style={{ background: config.bg, border: `1px solid ${config.border}` }}>
         <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: config.color }}>Status:</p>
         <p className="text-xs font-bold italic" style={{ color: config.color }}>{config.msg}</p>
@@ -593,12 +459,6 @@ function BtcDominanceCardExtra({ data }: { data: any }) {
 
   return (
     <div className="space-y-3 mt-1">
-      <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-[#848e9c]">Purpose</p>
-        <p className="text-xs leading-relaxed text-[#c9d1d9]">Understand crypto capital flows.</p>
-        <p className="text-[10px] font-bold uppercase tracking-widest mt-2" style={{ color: '#848e9c' }}>Narration</p>
-        <p className="text-xs leading-relaxed text-[#848e9c]">BTC dominance shows where crypto money is flowing.</p>
-      </div>
       <div className="p-3 rounded-xl" style={{ background: config.bg, border: `1px solid ${config.border}` }}>
         <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: config.color }}>Capital Flow:</p>
         <p className="text-xs font-bold italic" style={{ color: config.color }}>{config.msg}</p>
@@ -618,12 +478,6 @@ function EtfFlowsCardExtra({ data }: { data: any }) {
 
   return (
     <div className="space-y-3 mt-1">
-      <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-[#848e9c]">Purpose</p>
-        <p className="text-xs leading-relaxed text-[#c9d1d9]">Track institutional investment.</p>
-        <p className="text-[10px] font-bold uppercase tracking-widest mt-2" style={{ color: '#848e9c' }}>Narration</p>
-        <p className="text-xs leading-relaxed text-[#848e9c]">ETF flows represent large institutional capital movements.</p>
-      </div>
       <div className="p-3 rounded-xl" style={{ background: config.bg, border: `1px solid ${config.border}` }}>
         <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: config.color }}>Activity:</p>
         <p className="text-xs font-bold italic" style={{ color: config.color }}>{config.msg}</p>
@@ -642,12 +496,6 @@ function FedBalanceSheetCardExtra({ data }: { data: any }) {
 
   return (
     <div className="space-y-3 mt-1">
-      <div className="p-3 rounded-xl space-y-2" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid #2b2f36' }}>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-[#848e9c]">Purpose</p>
-        <p className="text-xs leading-relaxed text-[#c9d1d9]">Measure global liquidity.</p>
-        <p className="text-[10px] font-bold uppercase tracking-widest mt-2" style={{ color: '#848e9c' }}>Narration</p>
-        <p className="text-xs leading-relaxed text-[#848e9c]">The Fed balance sheet shows how much money is injected into the financial system.</p>
-      </div>
       <div className="p-3 rounded-xl" style={{ background: config.bg, border: `1px solid ${config.border}` }}>
         <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: config.color }}>Status:</p>
         <p className="text-xs font-bold italic" style={{ color: config.color }}>{config.msg}</p>
@@ -665,18 +513,18 @@ interface CardDef {
   icon: React.ComponentType<{ size?: number; className?: string }>
   getData: (data: any) => TrendValue | null
   renderExtra?: (data: any) => React.ReactNode
+  getAnalysis?: (data: any) => { label: string; msg: string; color: string } | null
 }
 
 const CARDS: CardDef[] = [
   {
     key: 'fomc',
-    title: 'FOMC Meeting',
-    detailLabel: 'Next FOMC Meeting Date',
+    title: 'Federal Reserve Policy Meeting',
+    detailLabel: 'Next Meeting',
     icon: MdEvent,
     getData: (data) => {
       const fomc = data?.fomc
       const nextMeeting = fomc?.nextMeeting ?? data?.nextFomcMeeting ?? 'N/A'
-      // Compute days until to set urgency as sentiment
       let sentiment: 'bullish' | 'bearish' | 'neutral' = 'neutral'
       if (nextMeeting !== 'N/A') {
         const d = new Date(nextMeeting)
@@ -695,29 +543,70 @@ const CARDS: CardDef[] = [
       }
     },
     renderExtra: (data) => <FomcCardExtra data={data} />,
+    getAnalysis: (data) => {
+      const nextMeeting = data?.fomc?.nextMeeting ?? data?.nextFomcMeeting
+      if (!nextMeeting || nextMeeting === 'N/A') return null
+      const d = new Date(nextMeeting)
+      if (isNaN(d.getTime())) return null
+      const days = Math.ceil((d.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      if (days <= 3) return { label: 'Major volatility imminent', msg: 'Traders often reduce risk before this event.', color: '#f87171' }
+      if (days <= 7) return { label: 'Positioning phase', msg: 'Markets may start positioning ahead of the Fed decision.', color: '#facc15' }
+      return { label: 'Wait phase', msg: 'Markets are currently in a waiting phase before the next decision.', color: '#34d399' }
+    }
   },
   {
     key: 'interestRate',
-    title: 'US Interest Rate',
-    detailLabel: 'Fed Funds Target Rate',
+    title: 'US Interest Rates',
+    detailLabel: 'Current Rate',
     icon: MdAccountBalance,
     getData: (data) => data?.interestRate ?? { current: data?.fedFundsRate ?? 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
     renderExtra: (data) => <InterestRateCardExtra data={data} />,
+    getAnalysis: (data) => {
+      const ir = data?.interestRate
+      const currentRaw = ir?.current ?? data?.fedFundsRate ?? 'N/A'
+      const previous = ir?.previous ?? []
+      const currentNum = parseFloat(String(currentRaw).replace('%', ''))
+      const prevNum = previous.length > 0 ? parseFloat(String(previous[0]).replace('%', '')) : NaN
+      if (isNaN(currentNum) || isNaN(prevNum)) return null
+      if (currentNum > prevNum) return { label: 'Rising', msg: 'Higher borrowing costs usually pressure stocks and crypto.', color: '#f87171' }
+      if (currentNum < prevNum) return { label: 'Falling', msg: 'Lower rates increase liquidity and support risk assets.', color: '#34d399' }
+      return { label: 'Stable', msg: 'Markets usually remain range bound.', color: '#facc15' }
+    }
   },
   {
     key: 'cpi',
-    title: 'CPI (YoY)',
+    title: 'Consumer Price Inflation',
+    detailLabel: 'Current CPI',
     icon: MdTimeline,
     getData: (data) => data?.inflation?.cpi ?? { current: data?.inflation?.cpi?.yoy ?? 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
     renderExtra: (data) => <CpiCardExtra data={data} />,
+    getAnalysis: (data) => {
+      const cpi = data?.inflation?.cpi
+      const currentRaw = cpi?.current ?? cpi?.yoy ?? 'N/A'
+      const previous = cpi?.previous ?? []
+      const currentNum = parseFloat(String(currentRaw).replace('%', ''))
+      const prevNum = previous.length > 0 ? parseFloat(String(previous[0]).replace('%', '')) : NaN
+      if (isNaN(currentNum) || isNaN(prevNum)) return null
+      if (currentNum > prevNum) return { label: 'Rising', msg: 'Higher inflation may force the Fed to raise interest rates.', color: '#f87171' }
+      if (currentNum < prevNum) return { label: 'Falling', msg: 'Cooling inflation reduces pressure on the Fed.', color: '#34d399' }
+      return { label: 'Stable', msg: 'Inflation is holding steady — Fed is in a monitoring mode.', color: '#facc15' }
+    }
   },
   {
     key: 'coreCpi',
-    title: 'Core CPI',
-    detailLabel: 'Excludes food & energy',
+    title: 'Core Inflation',
     icon: MdTimeline,
     getData: (data) => data?.inflation?.coreCpi ?? { current: 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
     renderExtra: (data) => <CoreCpiCardExtra data={data} />,
+    getAnalysis: (data) => {
+      const coreCpiRaw = data?.inflation?.coreCpi?.current ?? 'N/A'
+      const cpiRaw = data?.inflation?.cpi?.current ?? data?.inflation?.cpi?.yoy ?? 'N/A'
+      const coreNum = parseFloat(String(coreCpiRaw).replace('%', ''))
+      const cpiNum = parseFloat(String(cpiRaw).replace('%', ''))
+      if (isNaN(coreNum) || isNaN(cpiNum)) return null
+      if (coreNum > cpiNum) return { label: 'Strong', msg: 'Inflation may still be persistent beneath the surface.', color: '#f87171' }
+      return { label: 'Weak', msg: 'Price pressure appears to be cooling broadly.', color: '#34d399' }
+    }
   },
   {
     key: 'pce',
@@ -728,11 +617,20 @@ const CARDS: CardDef[] = [
   },
   {
     key: 'ppi',
-    title: 'PPI Inflation',
-    detailLabel: 'Producer Price Index (YoY)',
+    title: 'Producer Price Index',
     icon: MdTimeline,
     getData: (data) => data?.inflation?.ppi ?? { current: 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
     renderExtra: (data) => <PpiCardExtra data={data} />,
+    getAnalysis: (data) => {
+      const ppi = data?.inflation?.ppi
+      const currentRaw = ppi?.current ?? 'N/A'
+      const previous = ppi?.previous ?? []
+      const currentNum = parseFloat(String(currentRaw).replace('%', ''))
+      const prevNum = previous.length > 0 ? parseFloat(String(previous[0]).replace('%', '')) : NaN
+      if (isNaN(currentNum) || isNaN(prevNum)) return null
+      if (currentNum > prevNum) return { label: 'Likely', msg: 'Higher PPI often leads to future CPI increases.', color: '#f87171' }
+      return { label: 'Stable', msg: 'Producer costs appear stable or cooling.', color: '#34d399' }
+    }
   },
   {
     key: 'ism',
@@ -748,14 +646,32 @@ const CARDS: CardDef[] = [
       return { ...ism, sentiment }
     },
     renderExtra: (data) => <IsmPmiCardExtra data={data} />,
+    getAnalysis: (data) => {
+      const ism = data?.ism
+      const currentNum = parseFloat(String(ism?.current))
+      if (isNaN(currentNum)) return null
+      if (currentNum > 50) return { label: 'Expansion', msg: 'Economic activity remains strong.', color: '#34d399' }
+      if (currentNum < 50) return { label: 'Contraction', msg: 'Businesses may be reducing production.', color: '#f87171' }
+      return { label: 'Neutral', msg: 'The economy is at a neutral inflection point near the 50 threshold.', color: '#facc15' }
+    }
   },
   {
     key: 'unemployment',
-    title: 'Unemployment Rate',
+    title: 'Employment Data',
     detailLabel: 'Labor Market Strength',
     icon: MdBarChart,
     getData: (data) => data?.jobsData?.unemployment ?? { current: 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
     renderExtra: (data) => <EmploymentCardExtra data={data} />,
+    getAnalysis: (data) => {
+      const ur = data?.jobsData?.unemployment
+      const currentNum = parseFloat(String(ur?.current).replace('%', ''))
+      const previous = ur?.previous ?? []
+      const prevNum = previous.length > 0 ? parseFloat(String(previous[0]).replace('%', '')) : NaN
+      if (isNaN(currentNum) || isNaN(prevNum)) return null
+      if (currentNum > prevNum) return { label: 'Weakening', msg: 'Economy weakening', color: '#f87171' }
+      if (currentNum < prevNum) return { label: 'Strong', msg: 'Economy strong', color: '#34d399' }
+      return { label: 'Stable', msg: 'Labor market maintains steady levels.', color: '#facc15' }
+    }
   },
   {
     key: 'gold',
@@ -764,6 +680,16 @@ const CARDS: CardDef[] = [
     icon: FaCoins,
     getData: (data) => data?.goldPrice ?? { current: 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
     renderExtra: (data) => <GoldCardExtra data={data} />,
+    getAnalysis: (data) => {
+      const gold = data?.goldPrice
+      const currentNum = parseFloat(String(gold?.current).replace('$', '').replace(',', ''))
+      const previous = gold?.previous ?? []
+      const prevNum = previous.length > 0 ? parseFloat(String(previous[0]).replace('$', '').replace(',', '')) : NaN
+      if (isNaN(currentNum) || isNaN(prevNum)) return null
+      if (currentNum > prevNum * 1.005) return { label: 'High', msg: 'Investors may be moving away from risk.', color: '#f87171' }
+      if (currentNum < prevNum) return { label: 'Low', msg: 'Market fear is low, gold prices cooling.', color: '#34d399' }
+      return { label: 'Normal Sentiment', msg: 'Risk aversion levels are within normal ranges.', color: '#facc15' }
+    }
   },
   {
     key: 'crudeOil',
@@ -781,6 +707,12 @@ const CARDS: CardDef[] = [
       }
     },
     renderExtra: (data) => <OilCardExtra data={data} />,
+    getAnalysis: (data) => {
+      const q = data?.quotes?.CRUDE_OIL
+      if (!q) return null
+      if (q.change > 0) return { label: 'Higher', msg: 'Rising oil prices lead to higher inflation.', color: '#f87171' }
+      return { label: 'Lower', msg: 'Falling oil prices reduce inflation pressure.', color: '#34d399' }
+    }
   },
   {
     key: 'dxy',
@@ -789,6 +721,12 @@ const CARDS: CardDef[] = [
     icon: MdPublic,
     getData: (data) => data?.dxyIndex ?? { current: 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
     renderExtra: (data) => <DxyCardExtra data={data} />,
+    getAnalysis: (data) => {
+      const dxy = data?.dxyIndex
+      if (!dxy) return null
+      if (dxy.indicator === 'up') return { label: 'Tightening', msg: 'A stronger dollar pulls liquidity out of global risk assets.', color: '#f87171' }
+      return { label: 'Increasing', msg: 'A weaker dollar supports global markets.', color: '#34d399' }
+    }
   },
   {
     key: 'btcDominance',
@@ -797,6 +735,12 @@ const CARDS: CardDef[] = [
     icon: FaBitcoin,
     getData: (data) => data?.btcDominance ?? { current: 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
     renderExtra: (data) => <BtcDominanceCardExtra data={data} />,
+    getAnalysis: (data) => {
+      const dom = data?.btcDominance
+      if (!dom) return null
+      if (dom.indicator === 'up') return { label: 'Flowing to Bitcoin', msg: 'Capital is rotating into Bitcoin for safety or dominance.', color: '#facc15' }
+      return { label: 'Flowing to Altcoins', msg: 'Altcoins are gaining market share, signaling high risk appetite.', color: '#34d399' }
+    }
   },
   {
     key: 'etfFlows',
@@ -805,6 +749,13 @@ const CARDS: CardDef[] = [
     icon: MdAttachMoney,
     getData: (data) => data?.etfFlows?.dailyNet ?? { current: 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
     renderExtra: (data) => <EtfFlowsCardExtra data={data} />,
+    getAnalysis: (data) => {
+      const etf = data?.etfFlows
+      const currentStr = String(etf?.dailyNet?.current)
+      const isPositive = currentStr.includes('+') || (!currentStr.includes('-') && parseFloat(currentStr) > 0)
+      if (isPositive) return { label: 'Institutional Buying', msg: 'Large capital inflows from institutions support price.', color: '#34d399' }
+      return { label: 'Institutional Selling', msg: 'Capital outflows from large institutions may pressure prices.', color: '#f87171' }
+    }
   },
   {
     key: 'bitcoin',
@@ -836,6 +787,13 @@ const CARDS: CardDef[] = [
           </span>
         </div>
       )
+    },
+    getAnalysis: (data) => {
+      const btc = data?.quotes?.BTC
+      if (!btc) return null
+      return btc.change > 0 
+        ? { label: 'Daily Momentum: Bullish', msg: 'Price is trending up today, signaling positive short-term sentiment.', color: '#34d399' }
+        : { label: 'Daily Momentum: Bearish', msg: 'Price is trending down today, signaling cooling short-term sentiment.', color: '#f87171' }
     }
   },
   {
@@ -938,6 +896,11 @@ const CARDS: CardDef[] = [
     icon: MdAccountBalance,
     getData: (data) => data?.fedBalanceSheet ?? { current: 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
     renderExtra: (data) => <FedBalanceSheetCardExtra data={data} />,
+    getAnalysis: (data) => {
+      const bs = data?.fedBalanceSheet
+      if (bs?.indicator === 'up') return { label: 'Expanding Liquidity', msg: 'Fed is injecting money into the system (QE), supporting risk assets.', color: '#34d399' }
+      return { label: 'Tightening Liquidity', msg: 'Fed is draining money from the system (QT), pressuring risk assets.', color: '#f87171' }
+    }
   },
 ]
 
@@ -1145,11 +1108,11 @@ export default function NarrationSection() {
               <div className="mt-5 pt-4" style={{ borderTop: '1px solid #2b2f36' }}>
                 <button
                   onClick={() => setExplainKey(card.key)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all hover:scale-105 active:scale-95"
-                  style={{ background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.25)', color: '#eab308' }}
+                  className="flex items-center justify-center w-full gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all hover:bg-yellow-500/20 active:scale-95"
+                  style={{ background: 'rgba(234,179,8,0.15)', border: '1px solid rgba(234,179,8,0.3)', color: '#facc15' }}
                 >
-                  <MdAutoStories size={17} />
-                  Why does this matter for trading?
+                  <MdAutoStories size={18} />
+                  Narration
                 </button>
               </div>
             </div>
@@ -1204,12 +1167,20 @@ export default function NarrationSection() {
       )}
 
       {/* Explain Modal */}
-      {explainKey && (
-        <IndicatorExplainModal
-          indicatorKey={explainKey}
-          onClose={() => setExplainKey(null)}
-        />
-      )}
+      {explainKey && (() => {
+        const activeCard = CARDS.find(c => c.key === explainKey)
+        const activeData = activeCard?.getData(data)
+        return (
+          <IndicatorExplainModal
+            indicatorKey={explainKey}
+            onClose={() => setExplainKey(null)}
+            title={activeCard?.title ?? ''}
+            detailLabel={activeCard?.detailLabel}
+            currentValue={activeData?.current ?? 'N/A'}
+            analysis={activeCard?.getAnalysis?.(data)}
+          />
+        )
+      })()}
     </div>
   )
 }
