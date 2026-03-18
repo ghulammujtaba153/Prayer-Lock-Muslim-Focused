@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import {
   MdTrendingUp, MdTrendingDown, MdTrendingFlat, MdEvent,
   MdAccountBalance, MdTimeline, MdPublic, MdRefresh,
-  MdBarChart, MdAttachMoney, MdSecurity, MdInfoOutline,
+  MdBarChart, MdAttachMoney, MdInfoOutline,
   MdChevronLeft, MdChevronRight, MdAutoStories,
 } from 'react-icons/md'
 import { FaBitcoin, FaCoins, FaOilCan } from 'react-icons/fa'
@@ -882,13 +882,6 @@ const CARDS: CardDef[] = [
     }
   },
 
-  {
-    key: 'vix',
-    title: 'VIX Index',
-    detailLabel: 'Market Volatility — "The Fear Gauge"',
-    icon: MdSecurity,
-    getData: (data) => data?.riskIndicators?.vix ?? { current: 'N/A', previous: [], indicator: 'neutral', sentiment: 'neutral' },
-  },
   {
     key: 'fedBalanceSheet',
     title: 'Fed Balance Sheet',
